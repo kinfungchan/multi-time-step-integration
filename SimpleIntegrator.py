@@ -70,6 +70,10 @@ class SimpleIntegrator:
         self.mass[1:-1] *= 2
         self.stressComputer = stressComputer
         self.intForcesComputer=None
+        self.kinetic_energy = []
+        self.internal_energy = []
+        self.tot_energy = []
+        self.timestamps = []
 
     def assemble_internal(self):
         if (self.formulation == "updated"):
@@ -116,8 +120,22 @@ class SimpleIntegrator:
         if (self.formulation == "updated"):
             self.position += self.u # Updated Lagrangian
         self.n += 1
+        self.compute_energy()
         self.t += self.dt
         self.f_int.fill(0)
+
+    def compute_energy(self):
+        self.timestamps.append(self.t)
+        ke = 0
+        ie = 0
+        for i in range(self.n_nodes):
+            ke += 0.5 * self.mass[i] * self.v[i]**2
+        for j in range(self.n_elem):
+            ie += ((0.5 * self.stress[j]**2) / self.E) * self.dx
+        self.kinetic_energy.append(ke)
+        self.internal_energy.append(ie)
+        self.tot_energy.append(ke+ie)
+        
 
 class Plotting:
 
@@ -226,3 +244,18 @@ if __name__ == "__main__":
             writer.append_data(image)
     for filename in set(bar.filenames_stress):
         os.remove(filename)
+
+    # Energy Plot
+    plt.style.use('ggplot')
+    plt.plot(tot_bar.timestamps, tot_bar.kinetic_energy, "--")
+    plt.plot(upd_bar.timestamps, upd_bar.kinetic_energy)
+    plt.plot(tot_bar.timestamps, tot_bar.internal_energy, "--")
+    plt.plot(upd_bar.timestamps, upd_bar.internal_energy)
+    plt.plot(tot_bar.timestamps, tot_bar.tot_energy, "--")
+    plt.plot(upd_bar.timestamps, upd_bar.tot_energy)
+    plt.title(f"Elastic Energies for a Half Sine Excitation",fontsize=12)
+    plt.xlabel("Time (ms)")
+    plt.ylabel("Energy (kN-mm)")
+    plt.legend([f"Total Lagrangian KE", "Updated Lagrangian KE","Total Lagrangian IE", "Updated Lagrangian","Total Tot Lagrangian Total Energy", "Updated Tot Lagrangian Total Energy"])
+    plt.savefig(f'FEM1D_enbal.png')
+    plt.close()
