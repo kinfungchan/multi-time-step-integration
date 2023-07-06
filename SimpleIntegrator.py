@@ -45,7 +45,7 @@ class SimpleIntegrator:
     :param v_bc: velocity boundary condition
     """
 
-    def __init__(self, formulation, young, density, length, A, num_elems, tfinal, v_bc: bc, Co=1.0, stressComputer=None, intForcesComputer = None):
+    def __init__(self, formulation, young, density, length, A, num_elems, tfinal, v_bc: bc, Co=1.0):
         self.formulation = formulation
         self.E = young
         self.rho = density
@@ -68,8 +68,6 @@ class SimpleIntegrator:
         nodalMass = 0.5 * self.rho * self.dx
         self.mass = np.ones(self.n_nodes) * nodalMass
         self.mass[1:-1] *= 2
-        self.stressComputer = stressComputer
-        self.intForcesComputer=None
         self.kinetic_energy = []
         self.internal_energy = []
         self.tot_energy = []
@@ -81,11 +79,8 @@ class SimpleIntegrator:
             self.midposition = [self.position[n] + 0.5 * tempdx[n] for n in range(0, len(self.position)-1)]
             self.dt = self.Co * min(tempdx) * np.sqrt(self.rho / self.E) # Updated Lagrangian
             self.strain = np.zeros(self.n_elem)
-            if (self.stressComputer):
-                self.stress = self.stressComputer()
-            else:
-                self.strain = (np.diff(self.v) / tempdx) # Strain Measure is Rate of Deformation
-                self.stress += self.strain * self.dt * self.E # Updated Lagrangian
+            self.strain = (np.diff(self.v) / tempdx) # Strain Measure is Rate of Deformation
+            self.stress += self.strain * self.dt * self.E # Updated Lagrangian
 
             self.f_int[1:-1] = -np.diff(self.stress)
             self.f_int[0] += -self.stress[0]
@@ -94,11 +89,8 @@ class SimpleIntegrator:
         if (self.formulation == "total"):
             self.stress = np.zeros(self.n_elem)
             self.strain = np.zeros(self.n_elem)
-            if (self.stressComputer):
-                self.stress = self.stressComputer()
-            else:
-                self.strain = (np.diff(self.u) / self.dx) 
-                self.stress = self.strain * self.E
+            self.strain = (np.diff(self.u) / self.dx) 
+            self.stress = self.strain * self.E
 
             self.f_int[1:-1] = -np.diff(self.stress)
             self.f_int[0] += -self.stress[0]
