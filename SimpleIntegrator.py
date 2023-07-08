@@ -59,6 +59,7 @@ class SimpleIntegrator:
         self.v_bc = v_bc
         self.n = 0
         self.t = 0
+        self.a = np.zeros(self.n_nodes)
         self.v = np.zeros(self.n_nodes)
         self.u = np.zeros(self.n_nodes)
         self.stress = np.zeros(self.n_elem)
@@ -102,11 +103,11 @@ class SimpleIntegrator:
                 self.v[self.v_bc.indexes[counter]] = self.v_bc.velocities[counter](t)
 
     def single_tstep_integrate(self):
-        a = -self.f_int / self.mass
+        self.a = -self.f_int / self.mass
         if self.n == 0:
-            self.v += 0.5 * a * self.dt
+            self.v += 0.5 * self.a * self.dt
         else:
-            self.v += a * self.dt
+            self.v += self.a * self.dt
         self.assemble_bcs(self.t + 0.5 * self.dt)
         self.u += self.v * self.dt
         if (self.formulation == "updated"):
