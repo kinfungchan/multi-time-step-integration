@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from BoundaryConditions import  BoundaryConditions as bc
+from BoundaryConditions import  VelBoundaryConditions as vbc
 import imageio
 import os
 """
@@ -45,7 +45,7 @@ class SimpleIntegrator:
     :param v_bc: velocity boundary condition
     """
 
-    def __init__(self, formulation, young, density, length, A, num_elems, tfinal, v_bc: bc, Co=1.0):
+    def __init__(self, formulation, young, density, length, A, num_elems, tfinal, v_bc: vbc, Co=1.0):
         self.formulation = formulation
         self.E = young
         self.rho = density
@@ -104,6 +104,9 @@ class SimpleIntegrator:
 
     def single_tstep_integrate(self):
         self.a = -self.f_int / self.mass
+
+        # We also require an assemble_bcs for accelerations
+
         if self.n == 0:
             self.v += 0.5 * self.a * self.dt
         else:
@@ -202,7 +205,7 @@ if __name__ == "__main__":
     L = 1
     propTime = 0.5*L * np.sqrt(rho / E)
     def vel(t): return velbc(t, L, E, rho)
-    boundaryConditions = bc(list([0]), list([vel]))
+    boundaryConditions = vbc(list([0]), list([vel]))
     tot_formulation = "total"
     upd_formulation = "updated"
     upd_bar = SimpleIntegrator(upd_formulation, E, rho, L, 1, n_elem, 2*propTime, boundaryConditions, Co=1.0)
