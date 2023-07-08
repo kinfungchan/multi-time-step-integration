@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from BoundaryConditions import  VelBoundaryConditions as vbc
+from BoundaryConditions import  AccelBoundaryConditions as abc
 import imageio
 import os
 """
@@ -45,7 +46,7 @@ class SimpleIntegrator:
     :param v_bc: velocity boundary condition
     """
 
-    def __init__(self, formulation, young, density, length, A, num_elems, tfinal, v_bc: vbc, Co=1.0):
+    def __init__(self, formulation, young, density, length, A, num_elems, tfinal, v_bc: vbc, a_bc: abc, Co=1.0):
         self.formulation = formulation
         self.E = young
         self.rho = density
@@ -57,6 +58,7 @@ class SimpleIntegrator:
         self.position, self.dx = np.linspace(0, length, self.n_nodes, retstep=True)
         self.midposition = [self.position[n] + 0.5 * self.dx for n in range(0, len(self.position)-1)]
         self.v_bc = v_bc
+        self.a_bc = a_bc
         self.n = 0
         self.t = 0
         self.a = np.zeros(self.n_nodes)
@@ -205,11 +207,11 @@ if __name__ == "__main__":
     L = 1
     propTime = 0.5*L * np.sqrt(rho / E)
     def vel(t): return velbc(t, L, E, rho)
-    boundaryConditions = vbc(list([0]), list([vel]))
+    velboundaryConditions = vbc(list([0]), list([vel]))
     tot_formulation = "total"
     upd_formulation = "updated"
-    upd_bar = SimpleIntegrator(upd_formulation, E, rho, L, 1, n_elem, 2*propTime, boundaryConditions, Co=1.0)
-    tot_bar = SimpleIntegrator(tot_formulation, E, rho, L, 1, n_elem, 2*propTime, boundaryConditions, Co=1.0)
+    upd_bar = SimpleIntegrator(upd_formulation, E, rho, L, 1, n_elem, 2*propTime, velboundaryConditions, None, Co=1.0)
+    tot_bar = SimpleIntegrator(tot_formulation, E, rho, L, 1, n_elem, 2*propTime, velboundaryConditions, None, Co=1.0)
     bar = Plotting(tot_bar, upd_bar)
     while upd_bar.t <= upd_bar.tfinal:
         upd_bar.assemble_internal()
