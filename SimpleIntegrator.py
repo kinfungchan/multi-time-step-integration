@@ -99,21 +99,27 @@ class SimpleIntegrator:
             self.f_int[0] += -self.stress[0]
             self.f_int[-1] += self.stress[-1]
 
-    def assemble_bcs(self, t):
-        if (self.v_bc) :
+    def assemble_vbcs(self, t):
+        if (self.v_bc):
             for counter in range(0, len(self.v_bc.indexes)):
                 self.v[self.v_bc.indexes[counter]] = self.v_bc.velocities[counter](t)
+
+    def assemble_abcs(self):
+        if (self.a_bc):
+            for counter in range(0, len(self.a_bc.indexes)):
+                self.a[self.a_bc.indexes[counter]] = self.a_bc.accelerations[counter]
 
     def single_tstep_integrate(self):
         self.a = -self.f_int / self.mass
 
         # We also require an assemble_bcs for accelerations
+        # self.assemble_abcs() # check - we can just uncomment this and use simpleintegrator normally
 
         if self.n == 0:
             self.v += 0.5 * self.a * self.dt
         else:
             self.v += self.a * self.dt
-        self.assemble_bcs(self.t + 0.5 * self.dt)
+        self.assemble_vbcs(self.t + 0.5 * self.dt)
         self.u += self.v * self.dt
         if (self.formulation == "updated"):
             self.position += self.u # Updated Lagrangian
