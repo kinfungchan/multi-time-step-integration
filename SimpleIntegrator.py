@@ -107,14 +107,11 @@ class SimpleIntegrator:
     def assemble_abcs(self):
         if (self.a_bc):
             for counter in range(0, len(self.a_bc.indexes)):
-                self.a[self.a_bc.indexes[counter]] = self.a_bc.accelerations[counter]
+                self.a[self.a_bc.indexes[counter]] = self.a_bc.accelerations[counter]()
 
     def single_tstep_integrate(self):
         self.a = -self.f_int / self.mass
-
-        # We also require an assemble_bcs for accelerations
-        # self.assemble_abcs() # check - we can just uncomment this and use simpleintegrator normally
-
+        self.assemble_abcs() # check - we can just uncomment this and use simpleintegrator normally
         if self.n == 0:
             self.v += 0.5 * self.a * self.dt
         else:

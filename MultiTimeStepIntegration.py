@@ -14,8 +14,6 @@ A Multi-Time Stepping Algorithm for the Modelling of Heterogeneous Structures wi
 I.J. Num. Meth. in Eng., 2023;00:1–6.
 
 """
-
-
 class MultiTimeStep:
 
     """
@@ -43,33 +41,33 @@ class MultiTimeStep:
     """
 
     def integrate(self):
+    
         if ((self.large.t == 0) and (self.small.t == 0)):
             self.small.assemble_internal()
             self.large.assemble_internal()
-
-            self.small_tpredicted = self.small.t + self.small.dt
-            self.large_tpredicted = self.large.t + self.large.dt
-
             self.large.f_int[-1] += self.small.f_int[0]
             if (self.large.formulation != "updated"):
                 self.small.f_int.fill(0) # CHECK
-            acceleration_L = self.large.f_int[-1] / self.large.mass[-1]
+            # acceleration_L = accelCoupling(self.large.f_int[-1] , self.large.mass[-1])
             # Compute time step ratios
-        self.small.a[0] = acceleration_L # this will get overwrited by SimpleIntegrator currently
-        # we could pass in a flag to single_tstep_integrate
-        self.small.single_tstep_integrate()
+            self.small_tpredicted = self.small.t + self.small.dt
+            self.large_tpredicted = self.large.t + self.large.dt
 
+        # we could pass in a flag to single_tstep_integrate
+        largeForce = self.large.f_int[-1]
+        largeMass = self.large.mass[-1]
+        def accelCoupling(): return -largeForce / largeMass
+
+        self.small.a_bc.indexes.append(0)
+        self.small.a_bc.accelerations.append(accelCoupling)
+
+        self.small.single_tstep_integrate()
         self.small.assemble_internal()
         self.small_tpredicted = self.small.t + self.small.dt
 
-        self.small.a[0] = acceleration_L # this will get overwrited by SimpleIntegrator currently
-        # hard code a two loops of small steps before we use time step ratios
         self.small.single_tstep_integrate()
         self.small.assemble_internal()
         self.small_tpredicted = self.small.t + self.small.dt
-
-        
-        # we could pass in a flag to single_tstep_integrate
 
         # Compute Pullback Values
         self.alpha_L = 1 - ((self.large_tpredicted - self.small.t)/(self.large_tpredicted - self.large.t))
@@ -82,13 +80,12 @@ class MultiTimeStep:
             print("Error: Shouldn't be hitting this atm")
 
         self.large.single_tstep_integrate()
-        self.large.assemble_internal()
+        self.large.assemble_internal()        
         self.large_tpredicted = self.large.t + self.large.dt
 
         self.large.f_int[-1] += self.small.f_int[0]
         # if (self.large.formulation != "updated"):
         #         self.small.f_int.fill(0) # CHECK
-        acceleration_L = self.large.f_int[-1] / self.large.mass[-1]
 
         # calc_timestep_ratios()
 
@@ -136,7 +133,7 @@ def velbc(t, L, E, rho):
 
 def newCoupling():
     # Utilise same element size, drive time step ratio with Co.
-    nElemLarge = 250
+    nElemLarge = 250 
     refinementFactor = 2.1 
     E = 207
     rho = 7.83e-6
@@ -144,8 +141,9 @@ def newCoupling():
     Courant = 0.9
     propTime = 1 * L * np.sqrt(rho / E)
     def vel(t): return velbc(t, L, E, rho)
+    accelBoundaryCondtions = abc(list(),list())
     upd_largeDomain = SimpleIntegrator("updated", E, rho, L * 0.5, 1, nElemLarge, propTime, None, None, Co=Courant)
-    upd_smallDomain = SimpleIntegrator("updated", E, rho, L * 0.5, 1, nElemLarge, propTime, vbc([nElemLarge], [vel]), None, Co=Courant/refinementFactor)
+    upd_smallDomain = SimpleIntegrator("updated", E, rho, L * 0.5, 1, nElemLarge, propTime, vbc([nElemLarge], [vel]), accelBoundaryCondtions, Co=Courant/refinementFactor)
     upd_fullDomain = MultiTimeStep(upd_largeDomain, upd_smallDomain)
     plotfullDomain = Visualise_MultiTimestep(upd_fullDomain)
     # Solve Loop
