@@ -19,3 +19,5 @@ To Run:
 - pip install imageio
 - git clone the repo to your local machine
 - Now to test you can start and run with <python SimpleIntegrator.py> from the multi-time-step-integration folder
+
+<python MultiTimeStepIntegration.py> runs the 1D Numerical Example with a .gif output
