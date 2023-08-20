@@ -31,14 +31,17 @@ class MultiTimeStep:
         # Time step Ratio Computations
         self.large_tpredicted = 0.0
         self.small_tpredicted = 0.0
+        self.nextTimeStepRatio = 0.0 
+        self.currTimeStepRatio = 0.0
         # Pullback Values
         self.large_alpha = 0.0
         self.small_alpha = 0.0
 
-    """
-    First we implement with a Large Pullback without the need 
-    for time step ratios (solely for this case - not general)
-    """
+    def calc_timestep_ratios(self):
+        self.small_tpredicted = self.small.t + self.small.dt
+        self.large_tpredicted = self.large.t + self.large.dt
+        self.currTimeStepRatio = (self.small.t - self.large.t) / (self.large_tpredicted - self.large.t)
+        self.nextTimeStepRatio = ((self.small.t + self.small.dt) - self.large.t) / (self.large_tpredicted - self.large.t)
 
     def integrate(self):
     
@@ -46,28 +49,19 @@ class MultiTimeStep:
             self.small.assemble_internal()
             self.large.assemble_internal()
             self.large.f_int[-1] += self.small.f_int[0]
-            if (self.large.formulation != "updated"):
-                self.small.f_int.fill(0) # CHECK
-            # acceleration_L = accelCoupling(self.large.f_int[-1] , self.large.mass[-1])
-            # Compute time step ratios
-            self.small_tpredicted = self.small.t + self.small.dt
-            self.large_tpredicted = self.large.t + self.large.dt
+            self.calc_timestep_ratios()
 
-        # we could pass in a flag to single_tstep_integrate
-        largeForce = self.large.f_int[-1]
-        largeMass = self.large.mass[-1]
-        def accelCoupling(): return -largeForce / largeMass
+        while (self.nextTimeStepRatio <= 1 or (self.currTimeStepRatio <= 1 and self.nextTimeStepRatio <= 1.000001)):
+            largeForce = self.large.f_int[-1]
+            largeMass = self.large.mass[-1]
+            def accelCoupling(): return -largeForce / largeMass
 
-        self.small.a_bc.indexes.append(0)
-        self.small.a_bc.accelerations.append(accelCoupling)
+            self.small.a_bc.indexes.append(0)
+            self.small.a_bc.accelerations.append(accelCoupling)
 
-        self.small.single_tstep_integrate()
-        self.small.assemble_internal()
-        self.small_tpredicted = self.small.t + self.small.dt
-
-        self.small.single_tstep_integrate()
-        self.small.assemble_internal()
-        self.small_tpredicted = self.small.t + self.small.dt
+            self.small.single_tstep_integrate()
+            self.small.assemble_internal()
+            self.calc_timestep_ratios()
 
         # Compute Pullback Values
         self.alpha_L = 1 - ((self.large_tpredicted - self.small.t)/(self.large_tpredicted - self.large.t))
@@ -81,17 +75,9 @@ class MultiTimeStep:
 
         self.large.single_tstep_integrate()
         self.large.assemble_internal()        
-        self.large_tpredicted = self.large.t + self.large.dt
+        self.calc_timestep_ratios()
 
         self.large.f_int[-1] += self.small.f_int[0]
-        # if (self.large.formulation != "updated"):
-        #         self.small.f_int.fill(0) # CHECK
-
-        # calc_timestep_ratios()
-
-    def calc_timestep_ratios(self):
-        pass
-    # Place where we have predicted time time step
 
 class Visualise_MultiTimestep:
 
