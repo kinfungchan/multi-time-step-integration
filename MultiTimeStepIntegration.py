@@ -19,15 +19,15 @@ class MultiTimeStep:
     """
     Constructor for the subcycling class
     It accepts two domains a large and a small one
-    They are both SimpleIntegrators, and they ratio is an integer number:
-             LARGE      |   SMALL
-    *----*----*----*----*--*--*--*--*
+    They are both SimpleIntegrators, and they ratio is a non-integer number:
+    LARGE     |   SMALL
+    *----*----*--*--*--*--*
     """
     def __init__(self, largeDomain: SimpleIntegrator, smallDomain: SimpleIntegrator):
         
         self.large = largeDomain
         self.small = smallDomain
-        self.large.mass[-1] += self.small.mass[0] #CHANGE when swapping domain for paper numerical e.g.
+        self.large.mass[-1] += self.small.mass[0] 
         # Time step Ratio Computations
         self.large_tpredicted = 0.0
         self.small_tpredicted = 0.0
@@ -71,7 +71,6 @@ class MultiTimeStep:
             self.large.dt = self.alpha_L * self.large.dt
         elif (self.alpha_s > self.alpha_L):
             self.small.dt = self.alpha_s * self.small.dt
-            print("Error: Shouldn't be hitting this atm")
 
         self.large.single_tstep_integrate()
         self.large.assemble_internal()        
@@ -90,11 +89,11 @@ class Visualise_MultiTimestep:
         self.filenames.append(f'FEM1D{self.updated.large.n}.png')
         plt.style.use('ggplot')
         plt.plot(self.updated.large.position, self.updated.large.v, "--")
-        plt.plot(self.updated.small.position + 0.5, self.updated.small.v, "--")
-        plt.title(f"Graph of Velocity against Position for a Half Sine Excitation (Compression)", fontsize=9)
+        plt.plot(self.updated.small.position + self.updated.large.L , self.updated.small.v, "--")
+        plt.title(f"1D Wave Propagation through Heterogeneous Media", fontsize=9)
         plt.xlabel("Domain Position (mm)", fontsize=9)
         plt.ylabel("Velocity (mm/ms)", fontsize=9)
-        plt.legend([f"Updated Large Domain", "Updated Small Domain"])
+        plt.legend([f"Updated Large Time Step Domain", "Updated Small Time Step Domain"])
         plt.savefig(f'FEM1D{self.updated.large.n}.png')
         plt.close()
 
@@ -109,27 +108,26 @@ class Visualise_MultiTimestep:
 
 
 def velbc(t, L, E, rho):
-    sinePeriod = (L / 2) * np.sqrt(rho/E)
+    sinePeriod = (L) * np.sqrt(rho/E)
     freq = 1 / sinePeriod
     if t >= sinePeriod * 0.5:
         return 0
     else:
-        return -0.01 * np.sin(2 * np.pi * freq * t) #force higher - original 0.01
-
+        return 0.01 * np.sin(2 * np.pi * freq * t)
 
 def newCoupling():
     # Utilise same element size, drive time step ratio with Co.
     nElemLarge = 250 
-    refinementFactor = 2.1 
-    E = 207
+    E_L = 207
+    E_s = 1000
     rho = 7.83e-6
-    L = 1
     Courant = 0.9
-    propTime = 1 * L * np.sqrt(rho / E)
-    def vel(t): return velbc(t, L, E, rho)
+    Length = 125
+    propTime = 1.75 * Length * np.sqrt(rho / E_L)    
+    def vel(t): return velbc(t, Length , E_L, rho)
     accelBoundaryCondtions = abc(list(),list())
-    upd_largeDomain = SimpleIntegrator("updated", E, rho, L * 0.5, 1, nElemLarge, propTime, None, None, Co=Courant)
-    upd_smallDomain = SimpleIntegrator("updated", E, rho, L * 0.5, 1, nElemLarge, propTime, vbc([nElemLarge], [vel]), accelBoundaryCondtions, Co=Courant/refinementFactor)
+    upd_largeDomain = SimpleIntegrator("updated", E_L, rho, Length, 1, nElemLarge, propTime, vbc([0], [vel]), None, Co=Courant)
+    upd_smallDomain = SimpleIntegrator("updated", E_s, rho, Length * 2, 1, nElemLarge, propTime, None, accelBoundaryCondtions, Co=Courant)
     upd_fullDomain = MultiTimeStep(upd_largeDomain, upd_smallDomain)
     plotfullDomain = Visualise_MultiTimestep(upd_fullDomain)
     # Solve Loop
@@ -137,7 +135,6 @@ def newCoupling():
         upd_fullDomain.integrate()
         plotfullDomain.plot()
     plotfullDomain.create_gif()
-
 
 if __name__ == "__main__":
     newCoupling()
