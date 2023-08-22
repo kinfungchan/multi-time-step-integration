@@ -58,7 +58,7 @@ class Subcycling:
             self.small.single_tstep_integrate()
             counter += 1
 
-class Plotting_Subcycling:
+class Visualise_Subcycling:
 
     def __init__(self, tot_fullDomain: Subcycling, upd_fullDomain: Subcycling):
 
@@ -94,29 +94,9 @@ Same example as in the Simple Integrator but this time using Subcycling
 The interface between the two domains is at x = 0.5
 """
 
-# def velbc(t, L, E, rho):
-#     sinePeriod = (L / 2) * np.sqrt(rho/E)
-#     freq = 1 / sinePeriod
-#     if t >= sinePeriod * 0.5:
-#         return 0
-#     else:
-#         return -0.01 * np.sin(2 * np.pi * freq * t) #force higher - original 0.01
-
-
-# def velbcHighFreq(t, L, E, rho):
-#     sinePeriod = (L / 2) * np.sqrt(rho/E)
-#     highFreqPeriod = (L / 100) * np.sqrt(rho/E)
-#     freq = 1 / sinePeriod
-#     highFreq = 1 / highFreqPeriod
-#     if t >= sinePeriod * 0.5:
-#         return 0
-#     else:
-#         return 0.01 * np.sin(2 * np.pi * freq * t) + 0.001 * np.sin(2 * np.pi * highFreq * t)
-
 """
 The unstable coupling integrates the bar WITHOUT the exchange of mass
 """
-
 def unstableCoupling():
     nElemLarge = 125
     refinementFactor = 2
@@ -133,7 +113,7 @@ def unstableCoupling():
     upd_largeDomain = SimpleIntegrator("updated", E, rho, L * 0.5, 1, nElemLarge, propTime, None, None, Co=Courant)
     upd_smallDomain = SimpleIntegrator("updated", E, rho, L * 0.5, 1, nElemSmall, propTime, vbc([nElemSmall], [vel]), None, Co=Courant)
     upd_fullDomain = Subcycling("unstable", upd_largeDomain, upd_smallDomain, refinementFactor)
-    fullDomain = Plotting_Subcycling(tot_fullDomain, upd_fullDomain)
+    fullDomain = Visualise_Subcycling(tot_fullDomain, upd_fullDomain)
     while(upd_fullDomain.large.t <= upd_fullDomain.large.tfinal):
         upd_fullDomain.integrate()
         tot_fullDomain.integrate()
@@ -159,7 +139,7 @@ def stableCoupling():
     upd_largeDomain = SimpleIntegrator("updated", E, rho, L * 0.5, 1, nElemLarge, propTime, None, None, Co=Courant)
     upd_smallDomain = SimpleIntegrator("updated", E, rho, L * 0.5, 1, nElemLarge, propTime, vbc([nElemLarge], [vel]), None, Co=Courant/refinementFactor)
     upd_fullDomain = Subcycling("stable", upd_largeDomain, upd_smallDomain, refinementFactor)
-    fullDomain = Plotting_Subcycling(tot_fullDomain, upd_fullDomain)
+    fullDomain = Visualise_Subcycling(tot_fullDomain, upd_fullDomain)
     while(upd_fullDomain.large.t <= upd_fullDomain.large.tfinal):
         upd_fullDomain.integrate()
         tot_fullDomain.integrate()
@@ -185,7 +165,7 @@ def spuriousWave():
     upd_largeDomain = SimpleIntegrator("updated", E, rho, L * 0.5, 1, nElemLarge, propTime, None, None, Co=Courant)
     upd_smallDomain = SimpleIntegrator("updated", E, rho, L * 0.5, 1, nElemSmall, propTime, vbc([nElemSmall], [vel]), None, Co=Courant)
     upd_fullDomain = Subcycling("stable", upd_largeDomain, upd_smallDomain, refinementFactor)
-    fullDomain = Plotting_Subcycling(tot_fullDomain, upd_fullDomain)
+    fullDomain = Visualise_Subcycling(tot_fullDomain, upd_fullDomain)
     while(upd_fullDomain.large.t <= upd_fullDomain.large.tfinal):
         upd_fullDomain.integrate()
         tot_fullDomain.integrate()
@@ -194,8 +174,8 @@ def spuriousWave():
 
 if __name__ == "__main__":
     # unstableCoupling()
-    # stableCoupling()
-    spuriousWave()
+    stableCoupling()
+    # spuriousWave()
 
 
 

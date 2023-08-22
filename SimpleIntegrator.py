@@ -138,7 +138,7 @@ class SimpleIntegrator:
         self.tot_energy.append(ke+ie)
         
 
-class Visualise_SimpleIntegrator:
+class Visualise_Monolithic:
 
     def __init__(self, totalLagrangian: SimpleIntegrator, updatedLagrangian: SimpleIntegrator):
 
@@ -217,8 +217,7 @@ In this example we use the simple integrator to simulate a velocity applied BC
 on the first node of the mesh
 
 """
-
-if __name__ == "__main__":
+def monolithic():
     n_elem = 375
     E = 207
     rho = 7.83e-6
@@ -227,23 +226,19 @@ if __name__ == "__main__":
     def vel(t): return vbc.velbc(t, L, E, rho)
     velboundaryConditions = vbc(list([0]), list([vel]))
     tot_formulation = "total"
-    upd_formulation = "updated"
-    upd_bar = SimpleIntegrator(upd_formulation, E, rho, L, 1, n_elem, 2*propTime, velboundaryConditions, None, Co=1.0)
     tot_bar = SimpleIntegrator(tot_formulation, E, rho, L, 1, n_elem, 2*propTime, velboundaryConditions, None, Co=1.0)
-    bar = Visualise_SimpleIntegrator(tot_bar, upd_bar)
-    while upd_bar.t <= upd_bar.tfinal:
-        upd_bar.assemble_internal()
-        upd_bar.single_tstep_integrate()
+    bar = Visualise_Monolithic(tot_bar, tot_bar)
+    while tot_bar.t <= tot_bar.tfinal:
         tot_bar.assemble_internal()
         tot_bar.single_tstep_integrate()
         bar.plot_vel()
         bar.plot_disp()
         bar.plot_stress()
     bar.plot_energy()
-
-    '''
-    The evolution of Velocity, Displacement and Stress is plotted in the following gifs
-    '''
+    # The evolution of Velocity, Displacement and Stress is plotted in the following gifs
     bar.create_gif('Updated_and_Total_1DFEM_vel.gif', bar.filenames_vel)
     bar.create_gif('Updated_and_Total_1DFEM_disp.gif', bar.filenames_disp)
     bar.create_gif('Updated_and_Total_1DFEM_stress.gif', bar.filenames_stress)
+
+if __name__ == "__main__":
+    monolithic()
