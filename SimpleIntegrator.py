@@ -111,7 +111,7 @@ class SimpleIntegrator:
 
     def single_tstep_integrate(self):
         self.a = -self.f_int / self.mass
-        self.assemble_abcs() # check - we can just uncomment this and use simpleintegrator normally
+        self.assemble_abcs() 
         if self.n == 0:
             self.v += 0.5 * self.a * self.dt
         else:
@@ -138,7 +138,7 @@ class SimpleIntegrator:
         self.tot_energy.append(ke+ie)
         
 
-class Plotting:
+class Visualise_SimpleIntegrator:
 
     def __init__(self, totalLagrangian: SimpleIntegrator, updatedLagrangian: SimpleIntegrator):
 
@@ -184,9 +184,32 @@ class Plotting:
         plt.savefig(f'FEM1D_stress{self.total.n}{self.updated.n}.png')
         plt.close()
 
+    def plot_energy(self):
+        plt.style.use('ggplot')
+        plt.locator_params(axis='both', nbins=4)
+        plt.plot(self.total.timestamps, self.total.kinetic_energy, "--")
+        plt.plot(self.updated.timestamps, self.updated.kinetic_energy)
+        plt.plot(self.total.timestamps, self.total.internal_energy, "--")
+        plt.plot(self.updated.timestamps, self.updated.internal_energy)
+        plt.plot(self.total.timestamps, self.total.tot_energy, "--")
+        plt.plot(self.updated.timestamps, self.updated.tot_energy)
+        plt.title(f"Elastic Energies for a Half Sine Excitation",fontsize=12)
+        plt.xlabel("Time (ms)")
+        plt.ylabel("Energy (kN-mm)")
+        plt.legend([f"Total Lagrangian KE", "Updated Lagrangian KE","Total Lagrangian IE", "Updated Lagrangian","Total Tot Lagrangian Total Energy", "Updated Tot Lagrangian Total Energy"])
+        plt.savefig(f'FEM1D_enbal.png')
+        plt.close()
+
+    def create_gif(self, gif_name, filenames):
+        with imageio.get_writer(gif_name, mode='I') as writer:
+            for filename in filenames:
+                image = imageio.imread(filename)
+                writer.append_data(image)
+        for filename in set(filenames):
+            os.remove(filename)
 
 """
-Example from Bombace Thesis
+Example from N.Bombace Thesis 2018
 
 Model now matches DARCoMS 1D Model 
 
@@ -215,7 +238,7 @@ if __name__ == "__main__":
     upd_formulation = "updated"
     upd_bar = SimpleIntegrator(upd_formulation, E, rho, L, 1, n_elem, 2*propTime, velboundaryConditions, None, Co=1.0)
     tot_bar = SimpleIntegrator(tot_formulation, E, rho, L, 1, n_elem, 2*propTime, velboundaryConditions, None, Co=1.0)
-    bar = Plotting(tot_bar, upd_bar)
+    bar = Visualise_SimpleIntegrator(tot_bar, upd_bar)
     while upd_bar.t <= upd_bar.tfinal:
         upd_bar.assemble_internal()
         upd_bar.single_tstep_integrate()
@@ -224,39 +247,11 @@ if __name__ == "__main__":
         bar.plot_vel()
         bar.plot_disp()
         bar.plot_stress()
+    bar.plot_energy()
 
-    with imageio.get_writer('Updated_and_Total_1DFEM_vel.gif', mode='I') as writer:
-        for filename in bar.filenames_vel:
-            image = imageio.imread(filename)
-            writer.append_data(image)
-    for filename in set(bar.filenames_vel):
-        os.remove(filename)
-
-    with imageio.get_writer('Updated_and_Total_1DFEM_disp.gif', mode='I') as writer:
-        for filename in bar.filenames_disp:
-            image = imageio.imread(filename)
-            writer.append_data(image)
-    for filename in set(bar.filenames_disp):
-        os.remove(filename)
-
-    with imageio.get_writer('Updated_and_Total_1DFEM_stress.gif', mode='I') as writer:
-        for filename in bar.filenames_stress:
-            image = imageio.imread(filename)
-            writer.append_data(image)
-    for filename in set(bar.filenames_stress):
-        os.remove(filename)
-
-    # Energy Plot
-    plt.style.use('ggplot')
-    plt.plot(tot_bar.timestamps, tot_bar.kinetic_energy, "--")
-    plt.plot(upd_bar.timestamps, upd_bar.kinetic_energy)
-    plt.plot(tot_bar.timestamps, tot_bar.internal_energy, "--")
-    plt.plot(upd_bar.timestamps, upd_bar.internal_energy)
-    plt.plot(tot_bar.timestamps, tot_bar.tot_energy, "--")
-    plt.plot(upd_bar.timestamps, upd_bar.tot_energy)
-    plt.title(f"Elastic Energies for a Half Sine Excitation",fontsize=12)
-    plt.xlabel("Time (ms)")
-    plt.ylabel("Energy (kN-mm)")
-    plt.legend([f"Total Lagrangian KE", "Updated Lagrangian KE","Total Lagrangian IE", "Updated Lagrangian","Total Tot Lagrangian Total Energy", "Updated Tot Lagrangian Total Energy"])
-    plt.savefig(f'FEM1D_enbal.png')
-    plt.close()
+    '''
+    The evolution of Velocity, Displacement and Stress is plotted in the following gifs
+    '''
+    bar.create_gif('Updated_and_Total_1DFEM_vel.gif', bar.filenames_vel)
+    bar.create_gif('Updated_and_Total_1DFEM_disp.gif', bar.filenames_disp)
+    bar.create_gif('Updated_and_Total_1DFEM_stress.gif', bar.filenames_stress)
