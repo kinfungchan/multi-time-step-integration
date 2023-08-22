@@ -106,15 +106,6 @@ class Visualise_MultiTimestep:
         for filename in set(self.filenames):
             os.remove(filename)
 
-
-def velbc(t, L, E, rho):
-    sinePeriod = (L) * np.sqrt(rho/E)
-    freq = 1 / sinePeriod
-    if t >= sinePeriod * 0.5:
-        return 0
-    else:
-        return 0.01 * np.sin(2 * np.pi * freq * t)
-
 def newCoupling():
     # Utilise same element size, drive time step ratio with Co.
     nElemLarge = 250 
@@ -124,7 +115,7 @@ def newCoupling():
     Courant = 0.9
     Length = 125
     propTime = 1.75 * Length * np.sqrt(rho / E_L)    
-    def vel(t): return velbc(t, Length , E_L, rho)
+    def vel(t): return vbc.velbc(t, 2 * Length , E_L, rho)
     accelBoundaryCondtions = abc(list(),list())
     upd_largeDomain = SimpleIntegrator("updated", E_L, rho, Length, 1, nElemLarge, propTime, vbc([0], [vel]), None, Co=Courant)
     upd_smallDomain = SimpleIntegrator("updated", E_s, rho, Length * 2, 1, nElemLarge, propTime, None, accelBoundaryCondtions, Co=Courant)

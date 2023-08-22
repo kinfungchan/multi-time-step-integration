@@ -73,7 +73,7 @@ class Plotting_Subcycling:
         plt.plot(self.total.small.position + 0.5, self.total.small.v)
         plt.plot(self.updated.large.position, self.updated.large.v, "--")
         plt.plot(self.updated.small.position + 0.5, self.updated.small.v, "--")
-        plt.title(f"Graph of Velocity against Position for a Half Sine Excitation (Compression)", fontsize=9)
+        plt.title(f"Graph of Velocity against Position for a Half Sine Excitation", fontsize=9)
         plt.xlabel("Domain Position (mm)", fontsize=9)
         plt.ylabel("Velocity (mm/ms)", fontsize=9)
         plt.legend([f"Total Large Domain", "Total Small Domain", "Updated Large Domain", "Updated Small Domain"])
@@ -94,24 +94,24 @@ Same example as in the Simple Integrator but this time using Subcycling
 The interface between the two domains is at x = 0.5
 """
 
-def velbc(t, L, E, rho):
-    sinePeriod = (L / 2) * np.sqrt(rho/E)
-    freq = 1 / sinePeriod
-    if t >= sinePeriod * 0.5:
-        return 0
-    else:
-        return -0.01 * np.sin(2 * np.pi * freq * t) #force higher - original 0.01
+# def velbc(t, L, E, rho):
+#     sinePeriod = (L / 2) * np.sqrt(rho/E)
+#     freq = 1 / sinePeriod
+#     if t >= sinePeriod * 0.5:
+#         return 0
+#     else:
+#         return -0.01 * np.sin(2 * np.pi * freq * t) #force higher - original 0.01
 
 
-def velbcHighFreq(t, L, E, rho):
-    sinePeriod = (L / 2) * np.sqrt(rho/E)
-    highFreqPeriod = (L / 100) * np.sqrt(rho/E)
-    freq = 1 / sinePeriod
-    highFreq = 1 / highFreqPeriod
-    if t >= sinePeriod * 0.5:
-        return 0
-    else:
-        return 0.01 * np.sin(2 * np.pi * freq * t) + 0.001 * np.sin(2 * np.pi * highFreq * t)
+# def velbcHighFreq(t, L, E, rho):
+#     sinePeriod = (L / 2) * np.sqrt(rho/E)
+#     highFreqPeriod = (L / 100) * np.sqrt(rho/E)
+#     freq = 1 / sinePeriod
+#     highFreq = 1 / highFreqPeriod
+#     if t >= sinePeriod * 0.5:
+#         return 0
+#     else:
+#         return 0.01 * np.sin(2 * np.pi * freq * t) + 0.001 * np.sin(2 * np.pi * highFreq * t)
 
 """
 The unstable coupling integrates the bar WITHOUT the exchange of mass
@@ -126,7 +126,7 @@ def unstableCoupling():
     L = 1
     Courant = 0.5 # This coupling is unstable and needs a quite low Co number to work.
     propTime = 1 * L * np.sqrt(rho / E)
-    def vel(t): return velbc(t, L, E, rho)
+    def vel(t): return vbc.velbc(t, L, E, rho)
     tot_largeDomain = SimpleIntegrator("total", E, rho, L * 0.5, 1, nElemLarge, propTime, None, None, Co=Courant)
     tot_smallDomain = SimpleIntegrator("total", E, rho, L * 0.5, 1, nElemSmall, propTime, vbc([nElemSmall], [vel]), None, Co=Courant)
     tot_fullDomain = Subcycling("unstable", tot_largeDomain, tot_smallDomain, refinementFactor)    
@@ -152,7 +152,7 @@ def stableCoupling():
     L = 1
     Courant = 0.9
     propTime = 1 * L * np.sqrt(rho / E)
-    def vel(t): return velbc(t, L, E, rho)
+    def vel(t): return vbc.velbc(t, L, E, rho)
     tot_largeDomain = SimpleIntegrator("total", E, rho, L * 0.5, 1, nElemLarge, propTime, None, None, Co=Courant)
     tot_smallDomain = SimpleIntegrator("total", E, rho, L * 0.5, 1, nElemLarge, propTime, vbc([nElemLarge], [vel]), None, Co=Courant/refinementFactor)
     tot_fullDomain = Subcycling("stable", tot_largeDomain, tot_smallDomain, refinementFactor)
@@ -178,7 +178,7 @@ def spuriousWave():
     L = 1
     Courant = 0.5  # This coupling is unstable and needs a quite low Co number to work.
     propTime = 1.0 * L * np.sqrt(rho / E)
-    def vel(t): return velbcHighFreq(t, L, E, rho)
+    def vel(t): return vbc.velbcHighFreq(t, L, E, rho)
     tot_largeDomain = SimpleIntegrator("total", E, rho, L * 0.5, 1, nElemLarge, propTime, None, None, Co=Courant)
     tot_smallDomain = SimpleIntegrator("total", E, rho, L * 0.5, 1, nElemSmall, propTime, vbc([nElemSmall], [vel]), None, Co=Courant)
     tot_fullDomain = Subcycling("stable", tot_largeDomain, tot_smallDomain, refinementFactor)
@@ -194,8 +194,8 @@ def spuriousWave():
 
 if __name__ == "__main__":
     # unstableCoupling()
-    stableCoupling()
-    # spuriousWave()
+    # stableCoupling()
+    spuriousWave()
 
 
 

@@ -177,7 +177,7 @@ class Visualise_SimpleIntegrator:
         plt.style.use('ggplot')
         plt.plot(self.total.midposition, self.total.stress, "--")
         plt.plot(self.updated.midposition, self.updated.stress)
-        plt.title(f"Element Stress for a Half Sine Excitation (Compression)",fontsize=12)
+        plt.title(f"Element Stress for a Half Sine Excitation",fontsize=12)
         plt.xlabel("Domain Position (mm)")
         plt.ylabel("Stress (GPa)")
         plt.legend([f"Total Lagrangian", "Updated Lagrangian"])
@@ -218,21 +218,13 @@ on the first node of the mesh
 
 """
 
-def velbc(t, L, E, rho):
-    sinePeriod = (L / 2) * np.sqrt(rho/E)
-    freq = 1 / sinePeriod
-    if t >= sinePeriod * 0.5:
-        return 0
-    else:
-        return 0.01 * np.sin(2 * np.pi * freq * t)
-
 if __name__ == "__main__":
     n_elem = 375
     E = 207
     rho = 7.83e-6
     L = 1
     propTime = 0.5*L * np.sqrt(rho / E)
-    def vel(t): return velbc(t, L, E, rho)
+    def vel(t): return vbc.velbc(t, L, E, rho)
     velboundaryConditions = vbc(list([0]), list([vel]))
     tot_formulation = "total"
     upd_formulation = "updated"
