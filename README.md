@@ -21,3 +21,6 @@ To Run:
 - Now to test you can start and run with python SimpleIntegrator.py from the multi-time-step-integration folder
 
 python MultiTimeStepIntegration.py runs the 1D Numerical Example with a .gif output
+
+For those who prefer the use of Jupyter Notebooks, or would like to delve further into the equations of the
+algorithms, a Notebooks folder has been created that repeats the same functionality
