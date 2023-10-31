@@ -14,16 +14,16 @@ OX1 3PJ, UK
 To Run:
 - Download Python onto your local machine
 - Install the following python libraries
-- pip install numpy
-- pip install matplotlib
-- pip install imageio
+<pre>
+pip install numpy
+pip install matplotlib
+pip install imageio
+</pre>
 - git clone the repo to your local machine
 - Now to test you can start and run with python SimpleIntegrator.py from the multi-time-step-integration folder
 
 <pre>
-```python
 python MultiTimeStepIntegration.py 
-```
 </pre>
 runs the 1D Numerical Example from Section 3 of the paper with the following .gif output
 
