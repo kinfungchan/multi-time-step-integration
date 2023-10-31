@@ -22,5 +22,7 @@ To Run:
 
 python MultiTimeStepIntegration.py runs the 1D Numerical Example with a .gif output
 
+![MultiTimeStep GIF](Updated_Multi-time-step.gif)
+
 For those who prefer the use of Jupyter Notebooks, or would like to delve further into the equations of the
 algorithms, a Notebooks folder has been created that repeats the same functionality
