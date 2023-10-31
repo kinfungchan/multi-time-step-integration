@@ -20,9 +20,16 @@ To Run:
 - git clone the repo to your local machine
 - Now to test you can start and run with python SimpleIntegrator.py from the multi-time-step-integration folder
 
-python MultiTimeStepIntegration.py runs the 1D Numerical Example with a .gif output
+<pre>
+```python
+python MultiTimeStepIntegration.py 
+```
+</pre>
+runs the 1D Numerical Example from Section 3 of the paper with the following .gif output
 
 ![MultiTimeStep GIF](Updated_Multi-time-step.gif)
+
+For comparison an integer subcycling algorithm is also implemented, that uses interpolated velocities as seen in (Belytschko, 1979)
 
 For those who prefer the use of Jupyter Notebooks, or would like to delve further into the equations of the
 algorithms, a Notebooks folder has been created that repeats the same functionality
