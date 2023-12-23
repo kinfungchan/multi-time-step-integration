@@ -25,6 +25,7 @@ OX1 3PJ, UK
 <p align="center">
     <b>Fig 1: A full integration step for a coupling node between two multi time stepping subdomains </b>
 </p>
+
 ## Getting Started
 To Run:
 - Download Python onto your local machine
@@ -35,8 +36,8 @@ pip install matplotlib
 pip install imageio
 </pre>
 - git clone the repo to your local machine
-- Now to test you can run a single domain with python SimpleIntegrator.py from the multi-time-step-integration folder
-- To solve two subdomains we call the following
+- Now to test you can run a single domain with python SimpleIntegrator.py from the multi-time-step-integration folder. This is a simple code that solves the domain both in a total and updated Lagrangian formulation.
+- To solve two subdomains with our novel multi time step algorithm we call the following
 
 <pre>
 python MultiTimeStepIntegration.py 
@@ -48,12 +49,12 @@ This runs the Non-Integer 1D Numerical Example from Section 3 of the paper where
 <p align="center">
     <b>Fig 2: One-dimensional heterogeneous domain split into two subdomains with a half sine boundary condition </b>
 </p>
-You can expect the following .gif output after running the code.
+You can expect the following .gif output after running the code. A half sine wave travels from the left to the right with the domains varying in material properties.
 
 ![MultiTimeStep GIF](Updated_Multi-time-step.gif)
 
 ## Implementations from Literature
-For comparison an integer subcycling algorithm is also implemented, that uses interpolated velocities as seen in (Belytschko, 1979)
+For comparison an integer subcycling algorithm is also implemented, that uses interpolated velocities as seen in the paper by Belytschko, Ted, H-J. Yen, and R. Mullen. "Mixed methods for time integration." Computer Methods in Applied Mechanics and Engineering 17 (1979): 259-275
 
 ## Running from Notebooks
 For those who prefer the use of Jupyter Notebooks, or would like to delve further into the equations of the
@@ -65,5 +66,5 @@ For any other questions on how to run the repo or the paper itself, please reach
     <img src="Images/elastic-stress-wave-t4.png" alt="Metaconcrete Wave Propagation" width=100%>
 </p>
 <p align="center">
-    <b>Fig 3: Elastic Wave propagation in a metamaterial with single time step (monolithic) and multi time stepping solutions for a time step compared </b>
+    <b>Fig 3: Elastic Wave propagation in a metamaterial (metaconcrete) with single time step (monolithic) and multi time stepping solutions for a time step compared</b>
 </p>
