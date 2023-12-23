@@ -16,9 +16,15 @@ OX1 3PJ, UK
 ## Why Multi-Time Step Integration?
 - Solving a domain with a single time step is often inefficient for heterogeneous domains.
 - Hence integrating with multiple time steps was introduced, also known as subcycling.
+- This can lead to large speedups in the solution of a heterogeneous problem.
 - Unlike previously proposed algorithms, we allow for non-integer and non-constant time step ratios between subdomains.
 - However we want to ensure that using multiple time steps does not introduce instability into the solution of the problem. To do so, we use an energy balance check.
-
+<p align="center">
+    <img src="Images/two-domain-integration-diagram.png" alt="Multi Time Step Integration" width=100%>
+</p>
+<p align="center">
+    <b>Fig 1: A full integration step for a coupling node between two multi time stepping subdomains </b>
+</p>
 ## Getting Started
 To Run:
 - Download Python onto your local machine
@@ -29,12 +35,20 @@ pip install matplotlib
 pip install imageio
 </pre>
 - git clone the repo to your local machine
-- Now to test you can start and run with python SimpleIntegrator.py from the multi-time-step-integration folder
+- Now to test you can run a single domain with python SimpleIntegrator.py from the multi-time-step-integration folder
+- To solve two subdomains we call the following
 
 <pre>
 python MultiTimeStepIntegration.py 
 </pre>
-runs the 1D Numerical Example from Section 3 of the paper with the following .gif output
+This runs the Non-Integer 1D Numerical Example from Section 3 of the paper where a long bar is meshed with uniform linear FE discretisation, but two dissimilar materials.
+<p align="center">
+    <img src="Images/1d-bar.png" alt="One-dimensional heterogeneous domain" width=100%>
+</p>
+<p align="center">
+    <b>Fig 2: One-dimensional heterogeneous domain split into two subdomains with a half sine boundary condition </b>
+</p>
+You can expect the following .gif output after running the code.
 
 ![MultiTimeStep GIF](Updated_Multi-time-step.gif)
 
@@ -47,3 +61,9 @@ algorithms, a Notebooks folder has been created that repeats the same functional
 
 ## Further Questions
 For any other questions on how to run the repo or the paper itself, please reach out at kin.chan@eng.ox.ac.uk
+<p align="center">
+    <img src="Images/elastic-stress-wave-t4.png" alt="Metaconcrete Wave Propagation" width=100%>
+</p>
+<p align="center">
+    <b>Fig 3: Elastic Wave propagation in a metamaterial with single time step (monolithic) and multi time stepping solutions for a time step compared </b>
+</p>
