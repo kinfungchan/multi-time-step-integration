@@ -51,7 +51,7 @@ This runs the Non-Integer 1D Numerical Example from Section 3 of the paper where
 </p>
 You can expect the following .gif output after running the code. A half sine wave travels from the left to the right with the domains varying in material properties.
 
-![MultiTimeStep GIF](Updated_Multi-time-step.gif)
+![MultiTimeStep GIF](GIFs/Updated_Multi-time-step.gif)
 
 ## Implementations from Literature
 For comparison an integer subcycling algorithm is also implemented, that uses interpolated velocities as seen in the paper by Belytschko, Ted, H-J. Yen, and R. Mullen. "Mixed methods for time integration." Computer Methods in Applied Mechanics and Engineering 17 (1979): 259-275
