@@ -112,22 +112,29 @@ class Domain:
 
         """
         self.assemble_vbcs(self.t)
-        if self.t == 0:
-            self.a_n = np.linalg.solve(self.M, self.f_ext - np.dot(self.K, self.u))
-        else:
-            self.a_n = self.a_n1
-
-        # Compute Displacement 
-        u_n1 = self.u + (self.dt_C * self.v) + (0.5 * self.dt_C**2 * (((1 - 2 * self.beta) * self.a_n) + (2 * self.beta * self.a_n1)))
-        # Compute Acceleration
-        self.a_n1 = np.linalg.solve(self.M, self.f_ext - np.dot(self.K, u_n1)) 
-        # Compute Velocity
-        v_n1 = self.v + ((1 - self.gamma) * self.dt_C * self.a_n) + (self.gamma * self.dt_C * self.a_n1)   
+        # Timestep 0
+        if (self.t == 0):
+            self.a = np.linalg.solve(self.M, self.f_ext - np.dot(self.K, self.u))
+        # Calculation of Predictors
+        u_k1 = self.u + self.dt_C * self.v + self.a * (0.5 - self.beta) * self.dt_C**2
+        v_k1 = self.v + self.a * (1 - self.gamma) * self.dt_C
+        # Solution of Linear Problem
+        # Explicit Method
+        if (self.beta != 0.0):
+            self.a_k1 = np.linalg.solve(self.M, self.f_ext - np.dot(self.K, u_k1))
+        # Implicit Method
+        else:        
+            LHS = self.M + (self.K * self.beta * self.dt_C**2) 
+            RHS = self.f_ext - np.dot(self.K, u_k1)
+            self.a_k1 = np.linalg.solve(LHS, RHS) # Requires inverse of the K matrix  
+        # Calculation of Correctors
+        u_k1 = u_k1 + self.a_k1 * self.beta * self.dt_C**2
+        v_k1 = v_k1 + self.a_k1 * self.gamma * self.dt_C
 
         # Update State Variables
-        self.v = v_n1    
-        self.u = u_n1
-        self.t = self.t + self.dt_C
+        self.v = v_k1
+        self.u = u_k1
+        self.t = self.t + self.dt_C 
         self.n += 1
 
 class Visualise_Monolithic:
