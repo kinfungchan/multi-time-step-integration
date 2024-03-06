@@ -44,10 +44,6 @@ class Domain:
         self.n = 0
         self.t = 0.0
         self.a = np.zeros(self.n_nodes) # Acceleration Field
-
-        self.a_n = np.zeros(self.n_nodes) 
-        self.a_n1 = np.zeros(self.n_nodes)        
-
         self.v = np.zeros(self.n_nodes) # Velocity Field
         self.u = np.zeros(self.n_nodes) # Displacement Field
         self.stress = np.zeros(self.n_elems) # Stress Field
@@ -63,7 +59,7 @@ class Domain:
         self.L = np.zeros(self.n_nodes) # Boolean Vectors for Extracting Interface DOFs for global acc and disp
 
         self.alpha = 0.0 # Ratio of Time Step and Critical Time Step
-        self.beta = 0.0 # Coefficients for the Newmark Scheme
+        self.beta = 0.25 # Coefficients for the Newmark Scheme
         self.beta2 = 0.0 
         self.gamma = 0.5
 
@@ -78,7 +74,6 @@ class Domain:
             else:
                 self.M[i, i] = nodal_mass
         print("Lumped Mass Matrix")
-        print(self.M)
         
     def compute_stiffness_matrix(self):
         '''
@@ -96,10 +91,8 @@ class Domain:
         print(self.K)
 
     def element_update(self):
-        self.stress = np.zeros(self.n_elems)
-        self.strain = np.zeros(self.n_elems)
-        self.strain = (np.diff(self.u) / self.dx)
-        self.stress = self.E * self.strain
+        self.strain = (np.diff(self.u) / self.dx) 
+        self.stress = self.strain * self.E
 
     def assemble_vbcs(self, t):
         if (self.v_bc):
@@ -110,30 +103,35 @@ class Domain:
         """
         Function to solve discretised structural equation of motion using the Newmark Beta Method
 
-        """
-        self.assemble_vbcs(self.t)
-        # Timestep 0
+        """      
         if (self.t == 0):
             self.a = np.linalg.solve(self.M, self.f_ext - np.dot(self.K, self.u))
+            self.assemble_vbcs(self.t)
         # Calculation of Predictors
+        self.a[0] = 0.0
         u_k1 = self.u + self.dt_C * self.v + self.a * (0.5 - self.beta) * self.dt_C**2
         v_k1 = self.v + self.a * (1 - self.gamma) * self.dt_C
+        
         # Solution of Linear Problem
         # Explicit Method
-        if (self.beta != 0.0):
-            self.a_k1 = np.linalg.solve(self.M, self.f_ext - np.dot(self.K, u_k1))
+        if (self.beta == 0.0):
+            a_k1 = np.linalg.solve(self.M, self.f_ext - np.dot(self.K, u_k1))
+            a_k1[0] = 0.0
         # Implicit Method
         else:        
             LHS = self.M + (self.K * self.beta * self.dt_C**2) 
             RHS = self.f_ext - np.dot(self.K, u_k1)
-            self.a_k1 = np.linalg.solve(LHS, RHS) # Requires inverse of the K matrix  
+            a_k1 = np.linalg.solve(LHS, RHS) # Requires inverse of the K matrix  
+            a_k1[0] = 0.0
         # Calculation of Correctors
-        u_k1 = u_k1 + self.a_k1 * self.beta * self.dt_C**2
-        v_k1 = v_k1 + self.a_k1 * self.gamma * self.dt_C
+        u_k1 = u_k1 + a_k1 * self.beta * self.dt_C**2
+        v_k1 = v_k1 + a_k1 * self.gamma * self.dt_C
 
-        # Update State Variables
-        self.v = v_k1
+        # Update State Variables        
         self.u = u_k1
+        self.v = v_k1
+        self.assemble_vbcs(self.t)
+        self.a = a_k1
         self.t = self.t + self.dt_C 
         self.n += 1
 
@@ -142,9 +140,20 @@ class Visualise_Monolithic:
     def __init__(self, Large: Domain):
 
         self.domain = Large
+        self.filenames_accel = []
         self.filenames_vel = []
         self.filenames_disp = []
         self.filenames_stress = []
+
+    def plot_accel(self):
+        self.filenames_accel.append(f'FEM1D_accel{self.domain.n}.png')
+        plt.style.use('ggplot')
+        plt.plot(self.domain.position, self.domain.a)
+        plt.title(f"Graph of Acceleration against Position for a Square Wave Excitation",fontsize=12)
+        plt.xlabel("Domain Position (mm)")
+        plt.ylabel("Acceleration (mm/ms^2)")
+        plt.savefig(f'FEM1D_accel{self.domain.n}.png')
+        plt.close()
 
     def plot_vel(self):
         self.filenames_vel.append(f'FEM1D_vel{self.domain.n}.png')
@@ -208,11 +217,13 @@ if __name__ == '__main__':
         Domain_L.element_update()
         Domain_L.integrate()
         print("Time: ", Domain_L.t)
-        if Domain_L.n % 10 == 0:
+        if Domain_L.n % 20 == 0:
+            bar.plot_accel()
             bar.plot_vel()
             bar.plot_disp()
             bar.plot_stress()
     
+    bar.create_gif('FEM1DAccel.gif', bar.filenames_accel)
     bar.create_gif('FEM1DVel.gif', bar.filenames_vel)
     bar.create_gif('FEM1DDisp.gif', bar.filenames_disp)
     bar.create_gif('FEM1DStress.gif', bar.filenames_stress)
