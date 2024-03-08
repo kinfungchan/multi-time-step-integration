@@ -61,7 +61,7 @@ class Domain:
         self.B = np.zeros(self.n_nodes) # Boolean Vectors for Extracting Interface DOFs for each domain
         self.L = np.zeros(self.n_nodes) # Boolean Vectors for Extracting Interface DOFs for global acc and disp
 
-        self.beta = 0.25 # Coefficients for the Newmark Scheme
+        self.beta = 0.0 # Coefficients for the Newmark Scheme, 0 for CDM
         self.gamma = 0.5
 
     def compute_mass_matrix(self):
@@ -156,7 +156,7 @@ class Domain:
 
         # Weight Coefficients (maintain in Loop for when dt changes in Updated Lagrangian)
         alpha = self.dt / self.dt_C
-        theta = 0.5 # 0.5 for Average Displacement , 0 for CDM
+        theta = 0.0 # 0.5 for Average Displacement , 0 for CDM
         beta_1 = (alpha / 6) * (3 * alpha + theta - (theta * alpha ** 2))
         beta_2 = theta * (alpha / 6) * (alpha ** 2 - 1)
 
