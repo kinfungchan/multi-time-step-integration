@@ -46,7 +46,7 @@ class SimpleIntegrator:
     :param v_bc: velocity boundary condition
     """
 
-    def __init__(self, formulation, young, density, length, A, num_elems, tfinal, v_bc: vbc, a_bc: abc, Co=1.0):
+    def __init__(self, formulation, young, density, length, A, num_elems, tfinal, v_bc: vbc, a_bc: abc, Co):
         self.formulation = formulation
         self.E = young
         self.rho = density
@@ -144,45 +144,34 @@ class Visualise_Monolithic:
 
         self.total = totalLagrangian
         self.updated = updatedLagrangian
+        self.filenames_accel = []
         self.filenames_vel = []
         self.filenames_disp = []
         self.filenames_stress = []
 
-    def plot_vel(self):
-        self.filenames_vel.append(f'FEM1D_vel{self.total.n}{self.updated.n}.png')
+    def plot(self, totVariable, updVariable, totPosition, updPosition, title, xlabel, ylabel, filenames):
+        filenames.append(f'FEM1D_{title}{self.total.n}.png')
         plt.style.use('ggplot')
-        plt.plot(self.total.position, self.total.v, "--")
-        plt.plot(self.updated.position, self.updated.v)
-        plt.title(f"Graph of Velocity against Position for a Half Sine Excitation",fontsize=12)
-        plt.xlabel("Domain Position (mm)")
-        plt.ylabel("Velocity (mm/ms)")
+        plt.plot(totPosition, totVariable, "--")
+        plt.plot(updPosition, updVariable)
+        plt.title(title,fontsize=12)
+        plt.xlabel(xlabel)
+        plt.ylabel(ylabel)
         plt.legend([f"Total Lagrangian", "Updated Lagrangian"])
-        plt.savefig(f'FEM1D_vel{self.total.n}{self.updated.n}.png')
+        plt.savefig(f'FEM1D_{title}{self.total.n}.png')
         plt.close()
+
+    def plot_accel(self):
+        self.plot(self.total.a, self.updated.a, self.total.position, self.updated.position, "Acceleration", "Domain Position (m)", "Acceleration (m/s^2)", self.filenames_accel)
+
+    def plot_vel(self):
+        self.plot(self.total.v, self.updated.v, self.total.position, self.updated.position, "Velocity", "Domain Position (m)", "Velocity (m/s)", self.filenames_vel)
 
     def plot_disp(self):
-        self.filenames_disp.append(f'FEM1D_disp{self.total.n}{self.updated.n}.png')
-        plt.style.use('ggplot')
-        plt.plot(self.total.position, self.total.u, "--")
-        plt.plot(self.updated.position, self.updated.u)
-        plt.title(f"Graph of Displacement against Position for a Half Sine Excitation",fontsize=12)
-        plt.xlabel("Domain Position (mm)")
-        plt.ylabel("Displacement (mm)")
-        plt.legend([f"Total Lagrangian", "Updated Lagrangian"])
-        plt.savefig(f'FEM1D_disp{self.total.n}{self.updated.n}.png')
-        plt.close()
+        self.plot(self.total.u, self.updated.u, self.total.position, self.updated.position, "Displacement", "Domain Position (m)", "Displacement (m)", self.filenames_disp)
 
     def plot_stress(self):
-        self.filenames_stress.append(f'FEM1D_stress{self.total.n}{self.updated.n}.png')
-        plt.style.use('ggplot')
-        plt.plot(self.total.midposition, self.total.stress, "--")
-        plt.plot(self.updated.midposition, self.updated.stress)
-        plt.title(f"Element Stress for a Half Sine Excitation",fontsize=12)
-        plt.xlabel("Domain Position (mm)")
-        plt.ylabel("Stress (GPa)")
-        plt.legend([f"Total Lagrangian", "Updated Lagrangian"])
-        plt.savefig(f'FEM1D_stress{self.total.n}{self.updated.n}.png')
-        plt.close()
+        self.plot(self.total.stress, self.updated.stress, self.total.midposition, self.updated.midposition, "Element Stress", "Domain Position (m)", "Stress (Pa)", self.filenames_stress)
 
     def plot_energy(self):
         plt.style.use('ggplot')
@@ -194,8 +183,8 @@ class Visualise_Monolithic:
         plt.plot(self.total.timestamps, self.total.tot_energy, "--")
         plt.plot(self.updated.timestamps, self.updated.tot_energy)
         plt.title(f"Elastic Energies for a Half Sine Excitation",fontsize=12)
-        plt.xlabel("Time (ms)")
-        plt.ylabel("Energy (kN-mm)")
+        plt.xlabel("Time (s)")
+        plt.ylabel("Energy (N)")
         plt.legend([f"Total Lagrangian KE", "Updated Lagrangian KE","Total Lagrangian IE", "Updated Lagrangian","Total Tot Lagrangian Total Energy", "Updated Tot Lagrangian Total Energy"])
         plt.savefig(f'FEM1D_enbal.png')
         plt.close()
@@ -218,24 +207,30 @@ on the first node of the mesh
 
 """
 def monolithic():
-    n_elem = 375
-    E = 207
-    rho = 7.83e-6
-    L = 1
+    n_elem = 300
+    E = 0.02 * 10**9
+    rho = 8000
+    L = 50 * 10**-3
     propTime = 0.5*L * np.sqrt(rho / E)
-    def vel(t): return vbc.velbc(t, L, E, rho)
+    Co = 0.5
+    # def vel(t): return vbc.velbc(t, L, E, rho)
+    def vel(t): return vbc.velbcSquareWave(t, L, E, rho)
     velboundaryConditions = vbc(list([0]), list([vel]))
     tot_formulation = "total"
-    tot_bar = SimpleIntegrator(tot_formulation, E, rho, L, 1, n_elem, 2*propTime, velboundaryConditions, None, Co=1.0)
+    tot_bar = SimpleIntegrator(tot_formulation, E, rho, L, 1, n_elem, 2*propTime, velboundaryConditions, None, Co)
     bar = Visualise_Monolithic(tot_bar, tot_bar)
     while tot_bar.t <= tot_bar.tfinal:
         tot_bar.assemble_internal()
         tot_bar.single_tstep_integrate()
-        bar.plot_vel()
-        bar.plot_disp()
-        bar.plot_stress()
+        if tot_bar.n % 10 == 0:
+            print(f"Time: {tot_bar.t} s")
+            bar.plot_accel()
+            bar.plot_vel()
+            bar.plot_disp()
+            bar.plot_stress()
     bar.plot_energy()
     # The evolution of Velocity, Displacement and Stress is plotted in the following gifs
+    bar.create_gif('Updated_and_Total_1DFEM_accel.gif', bar.filenames_accel)
     bar.create_gif('Updated_and_Total_1DFEM_vel.gif', bar.filenames_vel)
     bar.create_gif('Updated_and_Total_1DFEM_disp.gif', bar.filenames_disp)
     bar.create_gif('Updated_and_Total_1DFEM_stress.gif', bar.filenames_stress)
