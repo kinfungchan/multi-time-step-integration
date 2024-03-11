@@ -90,10 +90,19 @@ class SimpleIntegrator:
             self.f_int[-1] += self.stress[-1]
 
         if (self.formulation == "total"):
-            self.stress = np.zeros(self.n_elem)
-            self.strain = np.zeros(self.n_elem)
             self.strain = (np.diff(self.u) / self.dx) 
             self.stress = self.strain * self.E
+
+            # Bulk Viscosity
+            D = (np.diff(self.v) / self.dx) # Deformation Gradient            
+            c = np.sqrt(self.E / self.rho) # Speed of sound
+            C0 = 0.0 # Bulk Viscosity Quadratic Coefficient
+            C1 = 0.06 # Bulk Viscosity Linear Coefficient
+            BV_quad = C0 * self.dx * D**2
+            BV_lin = C1 * c * D
+            bulk_viscosity_stress =  self.rho * self.dx * (BV_quad - BV_lin)
+            # Include bulk viscosity term in stress update
+            self.stress -= bulk_viscosity_stress  # Add bulk viscosity term
 
             self.f_int[1:-1] = -np.diff(self.stress)
             self.f_int[0] += -self.stress[0]
@@ -218,11 +227,11 @@ def monolithic():
     velboundaryConditions = vbc(list([0]), list([vel]))
     tot_formulation = "total"
     tot_bar = SimpleIntegrator(tot_formulation, E, rho, L, 1, n_elem, 2*propTime, velboundaryConditions, None, Co)
-    bar = Visualise_Monolithic(tot_bar, tot_bar)
+    bar = Visualise_Monolithic(tot_bar, tot_bar) # Just plotting same bar currently
     while tot_bar.t <= tot_bar.tfinal:
         tot_bar.assemble_internal()
         tot_bar.single_tstep_integrate()
-        if tot_bar.n % 10 == 0:
+        if tot_bar.n % 20 == 0:
             print(f"Time: {tot_bar.t} s")
             bar.plot_accel()
             bar.plot_vel()
