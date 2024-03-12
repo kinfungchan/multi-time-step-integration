@@ -66,6 +66,7 @@ class SimpleIntegrator:
         self.u = np.zeros(self.n_nodes)
         self.stress = np.zeros(self.n_elem)
         self.strain = np.zeros(self.n_elem)
+        self.bulk_viscosity_stress = np.zeros(self.n_elem)
         self.f_int = np.zeros(self.n_nodes)
         self.dt = Co * self.dx * np.sqrt(self.rho / self.E)
         nodalMass = 0.5 * self.rho * self.dx
@@ -100,9 +101,9 @@ class SimpleIntegrator:
             C1 = 0.06 # Bulk Viscosity Linear Coefficient
             BV_quad = C0 * self.dx * D**2
             BV_lin = C1 * c * D
-            bulk_viscosity_stress =  self.rho * self.dx * (BV_quad - BV_lin)
+            self.bulk_viscosity_stress =  self.rho * self.dx * (BV_quad - BV_lin)
             # Include bulk viscosity term in stress update
-            self.stress -= bulk_viscosity_stress  # Add bulk viscosity term
+            self.stress -= self.bulk_viscosity_stress  # Add bulk viscosity term
 
             self.f_int[1:-1] = -np.diff(self.stress)
             self.f_int[0] += -self.stress[0]
@@ -157,6 +158,7 @@ class Visualise_Monolithic:
         self.filenames_vel = []
         self.filenames_disp = []
         self.filenames_stress = []
+        self.filenames_bulk_viscosity_stress = []
 
     def plot(self, totVariable, updVariable, totPosition, updPosition, title, xlabel, ylabel, filenames):
         filenames.append(f'FEM1D_{title}{self.total.n}.png')
@@ -166,7 +168,7 @@ class Visualise_Monolithic:
         plt.title(title,fontsize=12)
         plt.xlabel(xlabel)
         plt.ylabel(ylabel)
-        plt.legend([f"Total Lagrangian", "Updated Lagrangian"])
+        plt.legend([f"Tot Lagr at T_t = {self.total.t:.8f}", f"Upd Lagr at T_l = {self.updated.t:.8f}"])
         plt.savefig(f'FEM1D_{title}{self.total.n}.png')
         plt.close()
 
@@ -181,6 +183,9 @@ class Visualise_Monolithic:
 
     def plot_stress(self):
         self.plot(self.total.stress, self.updated.stress, self.total.midposition, self.updated.midposition, "Element Stress", "Domain Position (m)", "Stress (Pa)", self.filenames_stress)
+
+    def plot_bulk_viscosity_stress(self):
+        self.plot(self.total.bulk_viscosity_stress, self.updated.bulk_viscosity_stress, self.total.midposition, self.updated.midposition, "Element Bulk Viscosity Stress", "Domain Position (m)", "Stress (Pa)", self.filenames_bulk_viscosity_stress)
 
     def plot_energy(self):
         plt.style.use('ggplot')
@@ -226,9 +231,13 @@ def monolithic():
     def vel(t): return vbc.velbcSquareWave(t, L, E, rho)
     velboundaryConditions = vbc(list([0]), list([vel]))
     tot_formulation = "total"
+    upd_formulation = "updated"
     tot_bar = SimpleIntegrator(tot_formulation, E, rho, L, 1, n_elem, 2*propTime, velboundaryConditions, None, Co)
-    bar = Visualise_Monolithic(tot_bar, tot_bar) # Just plotting same bar currently
+    upd_bar = SimpleIntegrator(upd_formulation, E, rho, L, 1, n_elem, 2*propTime, velboundaryConditions, None, Co)
+    bar = Visualise_Monolithic(tot_bar, upd_bar) # Just plotting same bar currently
     while tot_bar.t <= tot_bar.tfinal:
+        upd_bar.assemble_internal()
+        upd_bar.single_tstep_integrate()
         tot_bar.assemble_internal()
         tot_bar.single_tstep_integrate()
         if tot_bar.n % 20 == 0:
@@ -237,12 +246,14 @@ def monolithic():
             bar.plot_vel()
             bar.plot_disp()
             bar.plot_stress()
+            bar.plot_bulk_viscosity_stress()
     bar.plot_energy()
     # The evolution of Velocity, Displacement and Stress is plotted in the following gifs
     bar.create_gif('Updated_and_Total_1DFEM_accel.gif', bar.filenames_accel)
     bar.create_gif('Updated_and_Total_1DFEM_vel.gif', bar.filenames_vel)
     bar.create_gif('Updated_and_Total_1DFEM_disp.gif', bar.filenames_disp)
     bar.create_gif('Updated_and_Total_1DFEM_stress.gif', bar.filenames_stress)
+    bar.create_gif('Updated_and_Total_1DFEM_bulk_viscosity_stress.gif', bar.filenames_bulk_viscosity_stress)
 
 if __name__ == "__main__":
     monolithic()
