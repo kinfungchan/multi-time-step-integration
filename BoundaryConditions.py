@@ -31,7 +31,7 @@ class VelBoundaryConditions:
         if t >= sinePeriod * 0.5:
             return 0
         else:
-            return 10.0 
+            return 0.01
 
 class AccelBoundaryConditions:
     def __init__(self, indexes: list, accelerations: list):

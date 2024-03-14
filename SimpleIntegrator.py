@@ -49,7 +49,7 @@ class SimpleIntegrator:
     def __init__(self, formulation, young, density, length, A, num_elems, tfinal, v_bc: vbc, a_bc: abc, Co):
         self.formulation = formulation
         self.E = young
-        self.rho = density
+        # self.rho = density
         self.L = length
         self.n_elem = num_elems
         self.tfinal = tfinal
@@ -64,14 +64,16 @@ class SimpleIntegrator:
         self.a = np.zeros(self.n_nodes)
         self.v = np.zeros(self.n_nodes)
         self.u = np.zeros(self.n_nodes)
+        self.rho = np.ones(self.n_elem) * density
         self.stress = np.zeros(self.n_elem)
         self.strain = np.zeros(self.n_elem)
         self.bulk_viscosity_stress = np.zeros(self.n_elem)
         self.f_int = np.zeros(self.n_nodes)
-        self.dt = Co * self.dx * np.sqrt(self.rho / self.E)
-        nodalMass = 0.5 * self.rho * self.dx
+        self.dt = Co * self.dx * np.sqrt(min(self.rho) / self.E)
+        nodalMass = 0.5 * min(self.rho) * self.dx
         self.mass = np.ones(self.n_nodes) * nodalMass
         self.mass[1:-1] *= 2
+        self.elMass = np.ones(self.n_elem) * 2 * nodalMass
         self.kinetic_energy = []
         self.internal_energy = []
         self.tot_energy = []
@@ -81,10 +83,21 @@ class SimpleIntegrator:
         if (self.formulation == "updated"):
             tempdx = [self.position[n]-self.position[n-1] for n in range(1, len(self.position))] # Updated Lagrangian
             self.midposition = [self.position[n] + 0.5 * tempdx[n] for n in range(0, len(self.position)-1)]
-            self.dt = self.Co * min(tempdx) * np.sqrt(self.rho / self.E) # Updated Lagrangian
-            self.strain = np.zeros(self.n_elem)
+            self.rho = self.elMass / tempdx
+            self.dt = self.Co * min(tempdx) * np.sqrt(min(self.rho) / self.E) # Updated Lagrangian
             self.strain = (np.diff(self.v) / tempdx) # Strain Measure is Rate of Deformation
             self.stress += self.strain * self.dt * self.E # Updated Lagrangian
+
+            # Bulk Viscosity
+            D = (np.diff(self.v) / tempdx) # Deformation Gradient            
+            c = np.sqrt(self.E / self.rho) # Speed of sound
+            C0 = 0.0 # Bulk Viscosity Quadratic Coefficient
+            C1 = 0.06 # Bulk Viscosity Linear Coefficient
+            BV_quad = C0 * self.dx * D**2
+            BV_lin = C1 * c * D
+            self.bulk_viscosity_stress =  self.rho * tempdx * (BV_quad - BV_lin)
+            # Include bulk viscosity term in stress update
+            self.stress -= self.bulk_viscosity_stress  # Add bulk viscosity term
 
             self.f_int[1:-1] = -np.diff(self.stress)
             self.f_int[0] += -self.stress[0]
@@ -96,12 +109,12 @@ class SimpleIntegrator:
 
             # Bulk Viscosity
             D = (np.diff(self.v) / self.dx) # Deformation Gradient            
-            c = np.sqrt(self.E / self.rho) # Speed of sound
+            c = np.sqrt(self.E / min(self.rho)) # Speed of sound
             C0 = 0.0 # Bulk Viscosity Quadratic Coefficient
             C1 = 0.06 # Bulk Viscosity Linear Coefficient
             BV_quad = C0 * self.dx * D**2
             BV_lin = C1 * c * D
-            self.bulk_viscosity_stress =  self.rho * self.dx * (BV_quad - BV_lin)
+            self.bulk_viscosity_stress =  min(self.rho) * self.dx * (BV_quad - BV_lin)
             # Include bulk viscosity term in stress update
             self.stress -= self.bulk_viscosity_stress  # Add bulk viscosity term
 
@@ -226,14 +239,13 @@ def monolithic():
     rho = 8000
     L = 50 * 10**-3
     propTime = 0.5*L * np.sqrt(rho / E)
-    Co = 0.5
     # def vel(t): return vbc.velbc(t, L, E, rho)
     def vel(t): return vbc.velbcSquareWave(t, L, E, rho)
     velboundaryConditions = vbc(list([0]), list([vel]))
     tot_formulation = "total"
     upd_formulation = "updated"
-    tot_bar = SimpleIntegrator(tot_formulation, E, rho, L, 1, n_elem, 2*propTime, velboundaryConditions, None, Co)
-    upd_bar = SimpleIntegrator(upd_formulation, E, rho, L, 1, n_elem, 2*propTime, velboundaryConditions, None, Co)
+    tot_bar = SimpleIntegrator(tot_formulation, E, rho, L, 1, n_elem, 2*propTime, velboundaryConditions, None, Co=0.9)
+    upd_bar = SimpleIntegrator(upd_formulation, E, rho, L, 1, n_elem, 2*propTime, velboundaryConditions, None, Co=0.9)
     bar = Visualise_Monolithic(tot_bar, upd_bar) # Just plotting same bar currently
     while tot_bar.t <= tot_bar.tfinal:
         upd_bar.assemble_internal()
