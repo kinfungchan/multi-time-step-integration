@@ -115,7 +115,7 @@ def newCoupling():
     Courant = 0.9
     Length = 125
     propTime = 1.75 * Length * np.sqrt(rho / E_L)    
-    def vel(t): return vbc.velbc(t, 2 * Length , E_L, rho)
+    def vel(t): return vbc.velbcSquareWave(t, 2 * Length , E_L, rho)
     accelBoundaryCondtions = abc(list(),list())
     upd_largeDomain = SimpleIntegrator("updated", E_L, rho, Length, 1, nElemLarge, propTime, vbc([0], [vel]), None, Co=Courant)
     upd_smallDomain = SimpleIntegrator("updated", E_s, rho, Length * 2, 1, nElemLarge, propTime, None, accelBoundaryCondtions, Co=Courant)
@@ -124,7 +124,8 @@ def newCoupling():
     # Solve Loop
     while(upd_fullDomain.large.t <= upd_fullDomain.large.tfinal):
         upd_fullDomain.integrate()
-        plotfullDomain.plot()
+        if (upd_fullDomain.large.n % 5 == 0):
+            plotfullDomain.plot()
     plotfullDomain.create_gif()
 
 if __name__ == "__main__":

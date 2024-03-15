@@ -85,8 +85,8 @@ class SimpleIntegrator:
             self.midposition = [self.position[n] + 0.5 * tempdx[n] for n in range(0, len(self.position)-1)]
             self.rho = self.elMass / tempdx
             self.dt = self.Co * min(tempdx) * np.sqrt(min(self.rho) / self.E) # Updated Lagrangian
-            self.strain = (np.diff(self.v) / tempdx) # Strain Measure is Rate of Deformation
-            self.stress += self.strain * self.dt * self.E # Updated Lagrangian
+            self.strain = (np.diff(self.u) / self.dx) 
+            self.stress = self.strain * self.E
 
             # Bulk Viscosity
             D = (np.diff(self.v) / tempdx) # Deformation Gradient            
@@ -246,7 +246,7 @@ def monolithic():
     upd_formulation = "updated"
     tot_bar = SimpleIntegrator(tot_formulation, E, rho, L, 1, n_elem, 2*propTime, velboundaryConditions, None, Co=0.9)
     upd_bar = SimpleIntegrator(upd_formulation, E, rho, L, 1, n_elem, 2*propTime, velboundaryConditions, None, Co=0.9)
-    bar = Visualise_Monolithic(tot_bar, upd_bar) # Just plotting same bar currently
+    bar = Visualise_Monolithic(tot_bar, upd_bar) 
     while tot_bar.t <= tot_bar.tfinal:
         upd_bar.assemble_internal()
         upd_bar.single_tstep_integrate()
