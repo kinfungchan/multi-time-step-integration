@@ -60,11 +60,7 @@ class Domain:
         self.M = np.zeros((self.n_nodes, self.n_nodes)) # Mass Matrix
         self.f_ext = np.zeros(self.n_nodes) # External Force Vector
 
-        self.Lamda = np.zeros((self.n_nodes, self.n_nodes)) # Localised Lagrange Multipliers
-        self.B = np.zeros(self.n_nodes) # Boolean Vectors for Extracting Interface DOFs for each domain
-        self.L = np.zeros(self.n_nodes) # Boolean Vectors for Extracting Interface DOFs for global acc and disp
-
-        self.beta = 0.25 # Coefficients for the Newmark Scheme
+        self.beta = 0.0 # Coefficients for the Newmark Scheme
         self.gamma = 0.5
 
     def compute_mass_matrix(self):
@@ -92,12 +88,12 @@ class Domain:
             if i > 0 and i < (self.n_elems // 2):
                 self.K[i, i] += stiffness_element_L
         stiffness_element_S = self.E_S * self.A / self.dx
-        for i in range((self.n_elems // 2) + 1, self.n_nodes):
+        for i in range((self.n_elems // 2), self.n_nodes):
             self.K[i, i] += stiffness_element_S
             if i != self.n_nodes - 1:
                 self.K[i, i + 1] -= stiffness_element_S
                 self.K[i + 1, i] -= stiffness_element_S
-            if i > 0 and i < self.n_nodes - 1:
+            if i > (self.n_elems // 2) and i < self.n_nodes - 1:
                 self.K[i, i] += stiffness_element_S
         print("Stiffness Matrix")
         print(self.K)
@@ -106,7 +102,7 @@ class Domain:
         self.strain = (np.diff(self.u) / self.dx) 
         for i in range(self.n_elems // 2):
             self.stress[i] = self.strain[i] * self.E_L
-        for i in range((self.n_elems // 2) + 1, self.n_elems):
+        for i in range((self.n_elems // 2), self.n_elems):
             self.stress[i] = self.strain[i] * self.E_S
 
     def assemble_vbcs(self, t):
@@ -224,28 +220,28 @@ class Visualise_Monolithic:
 if __name__ == '__main__':
     # Initialise Domain
     E_L = 0.02 * 10**9 # 0.02GPa
-    E_s = 200 * 10**9 # 200GPa
+    E_s = 0.18 * 10**9 # 0.018GPa
     rho = 8000 # 8000kg/m^3
-    length = 50 * 10**-3 # 50mm
+    length = 2 * 50 * 10**-3 # 2 x 50mm
     area = 1 # 1m^2
     num_elements = 300
     safety_Parameter = 0.5
     def vel(t): return vbc.velbcSquare(t, length, E_L, rho)
     velboundaryConditions = vbc(list([0]), list([vel]))
 
-    Domain = Domain('CDM', E_L, E_s, rho, length, area, num_elements, safety_Parameter, velboundaryConditions)
+    Domain = Domain('PFPB', E_L, E_s, rho, length, area, num_elements, safety_Parameter, velboundaryConditions)
     Domain.compute_mass_matrix()
     Domain.compute_stiffness_matrix()
 
     bar = Visualise_Monolithic(Domain)
 
     # Integrate over time
-    while Domain.t < 0.001:
+    while Domain.t < 0.0015:
         Domain.element_update()
         # Domain.integrate_nb()
         Domain.integrate_pfpb()
         print("Time: ", Domain.t)
-        if Domain.n % 5000 == 0:
+        if Domain.n % 40 == 0:
             bar.plot_accel()
             bar.plot_vel()
             bar.plot_disp()
