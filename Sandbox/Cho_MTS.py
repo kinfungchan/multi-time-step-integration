@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 from SingleDomain import Domain
 from SingleDomain import Visualise_Monolithic
 from BoundaryConditions import  VelBoundaryConditions as vbc
+import imageio
+import os
 
 """
 In this notebook we look to reimplement Explicit Multistep Time Integration
@@ -189,12 +191,14 @@ class Multistep:
         # Calculate the Lagrange Multipliers on Pullback Step
         Bat_njL_S = np.dot(np.transpose(self.B_S), at_njL_S)
         Bat_njL_L = np.dot(np.transpose(self.B_L), at_njL_L)
-        Lambda_njL_L, Lambda_njS_S, a_njL_f = solve_Interface_EOM(BMB_L, BMB_S, self.L_L, self.L_S, Bat_njL_L , Bat_njL_S)
+        Lambda_njL_L, Lambda_njL_S, a_njL_f = solve_Interface_EOM(BMB_L, BMB_S, self.L_L, self.L_S, Bat_njL_L , Bat_njL_S)
 
         # Update Large Domain
         self.Large.u = self.Large.u + (self.Large.dt * self.Large.v) + (self.beta1_S * (self.Large.dt_C)**2 * self.Large.a) + (self.beta2_S * (self.Large.dt_C)**2 * a_nCL_L)
-        self.Large.a = at_njL_L - np.dot(invM_L, self.B_S * Lambda_njL_L) 
+        # self.Large.u[300] = self.u_f        
+        self.Large.a = at_njL_L - np.dot(invM_L, self.B_L * Lambda_njL_L) 
         self.Large.a[0] = 0.0
+        # self.Large.a[300] = self.a_f
         self.Large.v = self.Large.v + self.Large.dt * ((1 - self.Large.gamma) * self.Large.a + self.Large.gamma * self.Large.a) # Use of old a here?
         self.Large.assemble_vbcs(self.Large.t)    
         self.Large.t = self.Large.t + self.Large.dt
@@ -210,6 +214,48 @@ class Multistep:
             print("Large Time:", full_Domain.Large.t, "Small Time:", full_Domain.Small.t)
             exit()
 
+class Visualise_MTS:
+
+    def __init__(self, Domain: Multistep):
+
+        self.domain = Domain
+        self.filenames_accel = []
+        self.filenames_vel = []
+        self.filenames_disp = []
+        self.filenames_stress = []    
+
+    def plot(self, variable_L, variable_S, position_L, position_S, title, xlabel, ylabel, filenames):
+        filenames.append(f'FEM1D_{title}{self.domain.Large.n}.png')
+        plt.style.use('ggplot')
+        plt.plot(position_L, variable_L)
+        plt.plot([position + self.domain.Large.length for position in position_S], variable_S)  # Convert self.domain.Large.length to a list
+        plt.title(title,fontsize=12)
+        plt.xlabel(xlabel)
+        plt.ylabel(ylabel)
+        plt.legend(["Time: " + format(self.domain.Large.t * 1e6, ".1f") + "us"])
+        plt.savefig(f'FEM1D_{title}{self.domain.Large.n}.png')
+        plt.close()
+
+    def plot_accel(self):
+        self.plot(self.domain.Large.a, self.domain.Small.a, self.domain.Large.position, self.domain.Small.position, "Acceleration", "Domain Position (m)", "Acceleration (m/s^2)", self.filenames_accel)
+
+    def plot_vel(self):
+        self.plot(self.domain.Large.v, self.domain.Small.v, self.domain.Large.position, self.domain.Small.position,  "Velocity", "Domain Position (m)", "Velocity (m/s)", self.filenames_vel)
+
+    def plot_disp(self):
+        self.plot(self.domain.Large.u, self.domain.Small.u, self.domain.Large.position, self.domain.Small.position,  "Displacement", "Domain Position (m)", "Displacement (m)", self.filenames_disp)
+
+    def plot_stress(self):
+        self.plot(self.domain.Large.stress, self.domain.Small.stress, self.domain.Large.midposition, self.domain.Small.midposition, "Stress", "Domain Position (m)", "Stress (Pa)", self.filenames_stress)
+
+    def create_gif(self, gif_name, filenames):
+        with imageio.get_writer(gif_name, mode='I') as writer:
+            for filename in filenames:
+                image = imageio.imread(filename)
+                writer.append_data(image)
+        for filename in set(filenames):
+            os.remove(filename)
+
 if __name__ == '__main__':
     # Initialise Domains
     # Large Domain
@@ -217,37 +263,39 @@ if __name__ == '__main__':
     E_s = 0.18 * 10**9 # Integer Time Step Ratio = 3
     rho_L = 8000 # 8000kg/m^3
     length_L = 50 * 10**-3 # 50mm
+    length_S = 2 * 50 * 10**-3 # 100mm
     area_L = 1 # 1m^2
     num_elements_L = 300
+    num_elements_S = 600
     safety_Param = 0.5
-    def vel(t): return vbc.velbcSquare(t, length_L, E_L, rho_L)
+    def vel(t): return vbc.velbcSquare(t, 2 * length_L, E_L, rho_L)
     velboundaryConditions = vbc(list([0]), list([vel]))
     # Large Domain
     Domain_L = Domain('Large', E_L, rho_L, length_L, area_L, num_elements_L, safety_Param, velboundaryConditions)
     Domain_L.compute_mass_matrix()
     Domain_L.compute_stiffness_matrix()
     # Small Domain
-    Domain_S = Domain('Small', E_s, rho_L, length_L, area_L, num_elements_L, safety_Param, None)
+    Domain_S = Domain('Small', E_s, rho_L, length_S, area_L, num_elements_S, safety_Param, None)
     Domain_S.compute_mass_matrix()
     Domain_S.compute_stiffness_matrix()
     # Multistep Combined Domains
     full_Domain = Multistep(Domain_L, Domain_S, 3)
 
-    bar_L = Visualise_Monolithic(Domain_L)
-    bar_S = Visualise_Monolithic(Domain_S)
+    # Visualisation
+    bar = Visualise_MTS(full_Domain)
 
     # Integrate over time
     while Domain_L.t < 0.0015:
         full_Domain.multistep_pfpb()
         print("Time: ", Domain_L.t)
-        if Domain_L.n % 500 == 0:
-            bar_L.plot_accel()
-            bar_L.plot_vel()
-            bar_L.plot_disp()
-            bar_L.plot_stress()
+        if Domain_L.n % 40 == 0: 
+            bar.plot_accel()
+            bar.plot_vel()
+            bar.plot_disp()
+            bar.plot_stress()
 
-    bar_L.create_gif('FEM1DAccel.gif', bar_L.filenames_accel)
-    bar_L.create_gif('FEM1DVel.gif', bar_L.filenames_vel)
-    bar_L.create_gif('FEM1DDisp.gif', bar_L.filenames_disp)
-    bar_L.create_gif('FEM1DStress.gif', bar_L.filenames_stress)
+    bar.create_gif('FEM1DAccel.gif', bar.filenames_accel)
+    bar.create_gif('FEM1DVel.gif', bar.filenames_vel)
+    bar.create_gif('FEM1DDisp.gif', bar.filenames_disp)
+    bar.create_gif('FEM1DStress.gif', bar.filenames_stress)
 
