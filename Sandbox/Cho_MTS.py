@@ -113,38 +113,46 @@ class Multistep:
             # Find Unconstrained values for small Courant timestep (tilda)
             ut_nCS_S = self.Small.u + self.Small.dt_C * self.Small.v + self.Small.a * (0.5 * self.Small.dt_C**2)
             at_nCS_S = np.linalg.solve(self.Small.M, self.Small.f_ext - np.dot(self.Small.K, ut_nCS_S))
-            ut_nCS_L = self.Large.u + self.Small.dt_C * self.Large.v + self.Large.a * (0.5 * self.Small.dt_C**2)
-            at_nCS_L = np.linalg.solve(self.Large.M, self.Large.f_ext - np.dot(self.Large.K, ut_nCS_L))
+
+            E1E2_LargeM = self.Large.M[-3:, -3:]
+            E1E2_Largef_ext = self.Large.f_ext[-3:]
+            E1E2_LargeK = self.Large.K[-3:, -3:]
+            E1E2_ut_nCS_L = self.Large.u[-3:] + self.Small.dt_C * self.Large.v[-3:] + self.Large.a[-3:] * (0.5 * self.Small.dt_C**2)
+            E1E2_at_nCS_L = np.linalg.solve(E1E2_LargeM, E1E2_Largef_ext - np.dot(E1E2_LargeK, E1E2_ut_nCS_L))
+            E1E2_B_L = self.B_L[-3:]
             
             # Calculate the Lagrange Multipliers on Small Push-Forward Step (Courant Step)
             Bat_nCS_S = np.dot(np.transpose(self.B_S), at_nCS_S)
-            Bat_nCS_L = np.dot(np.transpose(self.B_L), at_nCS_L)
+            Bat_nCS_L = np.dot(np.transpose(E1E2_B_L), E1E2_at_nCS_L)
+
             Lambda_nCS_L, Lambda_nCS_S, a_nCS_f = solve_Interface_EOM(BMB_L, BMB_S, self.L_L, self.L_S, Bat_nCS_L , Bat_nCS_S)
 
-            # Calculating constrained acceleration
-            a_nCS_S = at_nCS_S - np.dot(invM_S, self.B_S * Lambda_nCS_S)
-            a_nCS_L = at_nCS_L - np.dot(invM_L, self.B_L * Lambda_nCS_L)
+            a_nCS_S = at_nCS_S
+            a_nCS_S[0] = a_nCS_f
 
             ## Pullback Step for actual Small Timestep nj_S 
             # Find Unconstrained values for actual small timestep
             ut_njS_S = self.Small.u + (self.Small.dt * self.Small.v) + (self.beta1_S * (self.Small.dt_C)**2 * self.Small.a) + (self.beta2_S * (self.Small.dt_C)**2 * at_nCS_S)
             at_njS_S = np.linalg.solve(self.Small.M, self.Small.f_ext - np.dot(self.Small.K, ut_njS_S))
-            ut_njS_L = self.Large.u + (self.Small.dt * self.Large.v) + (self.beta1_S * (self.Small.dt_C)**2 * self.Large.a) + (self.beta2_S * (self.Small.dt_C)**2 * at_nCS_L)
-            at_njS_L = np.linalg.solve(self.Large.M, self.Large.f_ext - np.dot(self.Large.K, ut_njS_L))
+
+            E1E2_ut_njS_L = self.Large.u[-3:] + (self.Small.dt * self.Large.v[-3:]) + (self.beta1_S * (self.Small.dt_C)**2 * self.Large.a[-3:]) + (self.beta2_S * (self.Small.dt_C)**2 * E1E2_at_nCS_L)
+            E1E2_at_njS_L = np.linalg.solve(E1E2_LargeM, E1E2_Largef_ext - np.dot(E1E2_LargeK, E1E2_ut_njS_L))
 
             # Calculate the Lagrange Multipliers on Pullback Step
             Bat_njS_S = np.dot(np.transpose(self.B_S), at_njS_S)
-            Bat_njS_L = np.dot(np.transpose(self.B_L), at_njS_L)
+            Bat_njS_L = np.dot(np.transpose(E1E2_B_L), E1E2_at_njS_L)
             Lambda_njS_L, Lambda_njS_S, a_njS_f = solve_Interface_EOM(BMB_L, BMB_S, self.L_L, self.L_S, Bat_njS_L , Bat_njS_S)
 
             # Update Small Domain
             self.Small.u = self.Small.u + (self.Small.dt * self.Small.v) + (self.beta1_S * (self.Small.dt_C)**2 * self.Small.a) + (self.beta2_S * (self.Small.dt_C)**2 * a_nCS_S)
-            self.Small.a = at_njS_S - np.dot(invM_S, self.B_S * Lambda_njS_S) # = np.linalg.solve(self.M, self.f_ext - np.dot(self.K, self.u)) - np.dot(invM_S, np.dot(self.B_S, self.Lambda_nj_S))
+            # self.Small.a = at_njS_S - np.dot(invM_S, self.B_S * Lambda_njS_S) #Corrective Acceleration != a_njS_f
+            self.Small.a = at_njS_S
+            self.Small.a[0] = a_njS_f
             self.Small.v = self.Small.v + self.Small.dt * ((1 - self.Small.gamma) * self.Small.a + self.Small.gamma * self.Small.a) # Use of old a here?
             self.Small.t = self.Small.t + self.Small.dt
             self.Small.n += 1
 
-            # Update Small Frames
+            # Update Frame
             self.a_f = a_njS_f
             self.v_f = self.Small.v[0]
             self.u_f = self.Small.u[0]
@@ -176,8 +184,10 @@ class Multistep:
         Lambda_nCL_L, Lambda_nCL_S, a_nCL_f = solve_Interface_EOM(BMB_L, BMB_S, self.L_L, self.L_S, Bat_nCL_L , Bat_nCL_S)
 
         # Calculating constrained acceleration
-        a_nCL_S = at_nCS_S - np.dot(invM_S, self.B_S * Lambda_nCL_S)    
-        a_nCL_L = at_nCS_L - np.dot(invM_L, self.B_L * Lambda_nCL_L)
+        a_nCL_S = at_nCL_S
+        a_nCL_S[0] = a_nCL_f
+        a_nCL_L = at_nCL_L
+        a_nCL_L[-1] = a_nCL_f
         a_nCL_L[0] = 0.0
 
         ## Pullback Step for Large Timestep nj_L
@@ -189,24 +199,23 @@ class Multistep:
         at_njL_L[0] = 0.0
 
         # Calculate the Lagrange Multipliers on Pullback Step
-        Bat_njL_S = np.dot(np.transpose(self.B_S), at_njL_S)
-        Bat_njL_L = np.dot(np.transpose(self.B_L), at_njL_L)
-        Lambda_njL_L, Lambda_njL_S, a_njL_f = solve_Interface_EOM(BMB_L, BMB_S, self.L_L, self.L_S, Bat_njL_L , Bat_njL_S)
+        Lambda_njL_L = Lambda_njS_L
+        Lambda_njL_S = Lambda_njS_S
+        a_njL_f = a_njS_f
 
         # Update Large Domain
         self.Large.u = self.Large.u + (self.Large.dt * self.Large.v) + (self.beta1_S * (self.Large.dt_C)**2 * self.Large.a) + (self.beta2_S * (self.Large.dt_C)**2 * a_nCL_L)
-        # self.Large.u[300] = self.u_f        
-        self.Large.a = at_njL_L - np.dot(invM_L, self.B_L * Lambda_njL_L) 
+        self.Large.a = at_njL_L
+        self.Large.a[-1] = a_njL_f
         self.Large.a[0] = 0.0
-        # self.Large.a[300] = self.a_f
         self.Large.v = self.Large.v + self.Large.dt * ((1 - self.Large.gamma) * self.Large.a + self.Large.gamma * self.Large.a) # Use of old a here?
         self.Large.assemble_vbcs(self.Large.t)    
         self.Large.t = self.Large.t + self.Large.dt
         self.Large.n += 1
 
         # Prevent Drifting with Small Frame
-        self.Large.u[self.Large.n_nodes - 1] = self.u_f
-        self.Large.v[self.Large.n_nodes - 1] = self.v_f
+        self.Large.u[-1] = self.u_f
+        self.Large.v[-1] = self.v_f
 
         # Check for Time Equivalence
         if abs(self.Large.t - self.Small.t) > 1e-10:
@@ -288,7 +297,7 @@ if __name__ == '__main__':
     while Domain_L.t < 0.0015:
         full_Domain.multistep_pfpb()
         print("Time: ", Domain_L.t)
-        if Domain_L.n % 40 == 0: 
+        if Domain_L.n % 10 == 0: 
             bar.plot_accel()
             bar.plot_vel()
             bar.plot_disp()
