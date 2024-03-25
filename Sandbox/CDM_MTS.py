@@ -98,11 +98,18 @@ class Multistep:
             # Compute Lagrange Multipliers and Frame Acceleration
             ut_njS_S = self.Small.u + self.Small.dt * self.Small.v 
             at_njS_S = np.linalg.solve(self.Small.M, self.Small.f_ext - np.dot(self.Small.K, ut_njS_S))            
-            ut_njS_L = self.Large.u + self.Large.dt * self.Large.v 
-            at_njS_L = np.linalg.solve(self.Large.M, self.Large.f_ext - np.dot(self.Large.K, ut_njS_L))
 
+            # Extract Last 3x3 in Large M, Large K and Last 3x1 in Large f_ext
+            E1E2_LargeM = self.Large.M[-3:, -3:]
+            E1E2_Largef_ext = self.Large.f_ext[-3:]
+            E1E2_LargeK = self.Large.K[-3:, -3:]
+            E1E2_ut_njS_L = self.Large.u[-3:] + self.Large.dt * self.Large.v[-3:]
+            E1E2_at_njS_L = np.linalg.solve(E1E2_LargeM, E1E2_Largef_ext - np.dot(E1E2_LargeK, E1E2_ut_njS_L)) 
+            E1E2_B_L = self.B_L[-3:]
+            
             Bat_njS_S = np.dot(np.transpose(self.B_S), at_njS_S)
-            Bat_njS_L = np.dot(np.transpose(self.B_L), at_njS_L) 
+            Bat_njS_L = np.dot(np.transpose(E1E2_B_L), E1E2_at_njS_L)
+
             Lambda_njS_L, Lambda_njS_S, a_njS_f = solve_Interface_EOM(BMB_L, BMB_S, self.L_L, self.L_S, Bat_njS_L , Bat_njS_S)    
 
             if (self.Small.t == 0):
@@ -115,8 +122,10 @@ class Multistep:
             # Solution of Linear Problem
             # Explicit Method
             if (self.Small.beta == 0.0):
-                a_k1 = np.linalg.solve(self.Small.M, self.Small.f_ext - np.dot(self.Small.K, u_k1))
+                a_k1 = np.linalg.solve(self.Small.M, self.Small.f_ext - np.dot(self.Small.K, u_k1)) 
+                correctiveAccel = np.dot(invM_S, (self.B_S * Lambda_njS_S)) # Why does correctiveAccel != a_njS_f?
                 a_k1[0] = a_njS_f
+
             # Calculation of Correctors
             u_k1 = u_k1 
             v_k1 = v_k1 + a_k1 * self.Small.gamma * self.Small.dt
