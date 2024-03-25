@@ -63,7 +63,7 @@ class Multistep:
         # Large Domain Interface
         self.B_L = np.zeros(self.Large.n_nodes) # Boolean Vectors for Extracting Interface DOFs for each domain
         self.L_L = 1 # Boolean Vectors for Extracting Interface DOFs for global acc and disp
-        self.B_L[self.Large.n_nodes - 1] = 1
+        self.B_L[-1] = 1
 
         # Small Domain Interface
         self.B_S = np.zeros(self.Small.n_nodes) # Boolean Vectors for Extracting Interface DOFs for each domain
@@ -96,14 +96,14 @@ class Multistep:
                 self.Small.a = np.linalg.solve(self.Small.M, self.Small.f_ext - np.dot(self.Small.K, self.Small.u))
 
             # Compute Lagrange Multipliers and Frame Acceleration
-            ut_njS_S = self.Small.u + self.Small.dt * self.Small.v 
+            ut_njS_S = self.Small.u + self.Small.dt * self.Small.v + self.Small.a * (0.5 - self.Small.beta) * self.Small.dt**2
             at_njS_S = np.linalg.solve(self.Small.M, self.Small.f_ext - np.dot(self.Small.K, ut_njS_S))            
 
             # Extract Last 3x3 in Large M, Large K and Last 3x1 in Large f_ext
             E1E2_LargeM = self.Large.M[-3:, -3:]
             E1E2_Largef_ext = self.Large.f_ext[-3:]
             E1E2_LargeK = self.Large.K[-3:, -3:]
-            E1E2_ut_njS_L = self.Large.u[-3:] + self.Large.dt * self.Large.v[-3:]
+            E1E2_ut_njS_L = self.Large.u[-3:] + self.Large.dt * self.Large.v[-3:] + self.Large.a[-3:] * (0.5 - self.Large.beta) * self.Large.dt**2
             E1E2_at_njS_L = np.linalg.solve(E1E2_LargeM, E1E2_Largef_ext - np.dot(E1E2_LargeK, E1E2_ut_njS_L)) 
             E1E2_B_L = self.B_L[-3:]
             
@@ -113,18 +113,16 @@ class Multistep:
             Lambda_njS_L, Lambda_njS_S, a_njS_f = solve_Interface_EOM(BMB_L, BMB_S, self.L_L, self.L_S, Bat_njS_L , Bat_njS_S)    
 
             if (self.Small.t == 0):
-                self.Small.a = np.linalg.solve(self.Small.M, self.Small.f_ext - np.dot(self.Small.K, self.Small.u))
+                self.Small.a = np.linalg.solve(self.Small.M, self.Small.f_ext - np.dot(self.Small.K, self.Small.u)) 
 
             # Calculation of Predictors
-            u_k1 = self.Small.u + self.Small.dt * self.Small.v + self.Small.a * (0.5 - self.Small.beta) * self.Small.dt**2
+            u_k1 = ut_njS_S
             v_k1 = self.Small.v + self.Small.a * (1 - self.Small.gamma) * self.Small.dt
         
             # Solution of Linear Problem
             # Explicit Method
             if (self.Small.beta == 0.0):
-                a_k1 = np.linalg.solve(self.Small.M, self.Small.f_ext - np.dot(self.Small.K, u_k1)) 
-                correctiveAccel = np.dot(invM_S, (self.B_S * Lambda_njS_S)) # Why does correctiveAccel != a_njS_f?
-                a_k1[0] = a_njS_f
+                a_k1 = at_njS_S - np.dot(invM_S, (self.B_S * Lambda_njS_S))   
 
             # Calculation of Correctors
             u_k1 = u_k1 
@@ -163,7 +161,7 @@ class Multistep:
         if (self.Large.beta == 0.0):
             a_k1 = np.linalg.solve(self.Large.M, self.Large.f_ext - np.dot(self.Large.K, u_k1))
             a_k1[0] = 0.0
-            a_k1[-1] = self.a_f
+            a_k1 -= np.dot(invM_L, (self.B_L * Lambda_njS_L))            
 
         u_k1 = u_k1
         v_k1 = v_k1 + a_k1 * self.Large.gamma * self.Large.dt
