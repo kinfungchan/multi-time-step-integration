@@ -95,7 +95,7 @@ class Multistep:
             if (self.Small.t == 0):
                 self.Small.a = np.linalg.solve(self.Small.M, self.Small.f_ext - np.dot(self.Small.K, self.Small.u))
 
-            # Compute Lagrange Multipliers and Frame Acceleration
+            # Compute Unconstrained Kinematics for Small Time Step
             ut_njS_S = self.Small.u + self.Small.dt * self.Small.v + self.Small.a * (0.5 - self.Small.beta) * self.Small.dt**2
             at_njS_S = np.linalg.solve(self.Small.M, self.Small.f_ext - np.dot(self.Small.K, ut_njS_S))            
 
@@ -109,29 +109,27 @@ class Multistep:
             
             Bat_njS_S = np.dot(np.transpose(self.B_S), at_njS_S)
             Bat_njS_L = np.dot(np.transpose(E1E2_B_L), E1E2_at_njS_L)
-
+            # Compute Lagrange Multipliers and Frame Acceleration
             Lambda_njS_L, Lambda_njS_S, a_njS_f = solve_Interface_EOM(BMB_L, BMB_S, self.L_L, self.L_S, Bat_njS_L , Bat_njS_S)    
 
             if (self.Small.t == 0):
                 self.Small.a = np.linalg.solve(self.Small.M, self.Small.f_ext - np.dot(self.Small.K, self.Small.u)) 
 
             # Calculation of Predictors
-            u_k1 = ut_njS_S
-            v_k1 = self.Small.v + self.Small.a * (1 - self.Small.gamma) * self.Small.dt
+            vt_njS_S = self.Small.v + self.Small.a * (1 - self.Small.gamma) * self.Small.dt
         
             # Solution of Linear Problem
             # Explicit Method
             if (self.Small.beta == 0.0):
-                a_k1 = at_njS_S - np.dot(invM_S, (self.B_S * Lambda_njS_S))   
+                a_njS_S = at_njS_S - np.dot(invM_S, (self.B_S * Lambda_njS_S))   
 
             # Calculation of Correctors
-            u_k1 = u_k1 
-            v_k1 = v_k1 + a_k1 * self.Small.gamma * self.Small.dt
+            v_njS_S = vt_njS_S + a_njS_S * self.Small.gamma * self.Small.dt
 
             # Update State Variables        
-            self.Small.u = u_k1
-            self.Small.v = v_k1
-            self.Small.a = a_k1
+            self.Small.u = ut_njS_S 
+            self.Small.v = v_njS_S
+            self.Small.a = a_njS_S
             self.Small.t = self.Small.t + self.Small.dt
             self.Small.n += 1
 
@@ -153,24 +151,24 @@ class Multistep:
             self.Large.assemble_vbcs(self.Large.t)
         
         self.Large.a[0] = 0.0
-        u_k1 = self.Large.u + self.Large.dt * self.Large.v + self.Large.a * (0.5 - self.Large.beta) * self.Large.dt**2
-        v_k1 = self.Large.v + self.Large.a * (1 - self.Large.gamma) * self.Large.dt
+        # Compute Unconstrained Kinematics for Large Time Step
+        ut_n1L_L = self.Large.u + self.Large.dt * self.Large.v + self.Large.a * (0.5 - self.Large.beta) * self.Large.dt**2
+        vt_n1L_L = self.Large.v + self.Large.a * (1 - self.Large.gamma) * self.Large.dt
        
         # Solution of Linear Problem
         # Explicit Method
         if (self.Large.beta == 0.0):
-            a_k1 = np.linalg.solve(self.Large.M, self.Large.f_ext - np.dot(self.Large.K, u_k1))
-            a_k1[0] = 0.0
-            a_k1 -= np.dot(invM_L, (self.B_L * Lambda_njS_L))            
+            at_n1L_L = np.linalg.solve(self.Large.M, self.Large.f_ext - np.dot(self.Large.K, ut_n1L_L))
+            at_n1L_L[0] = 0.0
+            a_n1L_L = at_n1L_L - np.dot(invM_L, (self.B_L * Lambda_njS_L))            
 
-        u_k1 = u_k1
-        v_k1 = v_k1 + a_k1 * self.Large.gamma * self.Large.dt
+        v_n1L_L = vt_n1L_L + a_n1L_L  * self.Large.gamma * self.Large.dt
 
         # Update State Variables        
-        self.Large.u = u_k1
-        self.Large.v = v_k1
+        self.Large.u = ut_n1L_L
+        self.Large.v = v_n1L_L
         self.Large.assemble_vbcs(self.Large.t)
-        self.Large.a = a_k1
+        self.Large.a = a_n1L_L 
 
         self.Large.u[-1] = self.u_f
         self.Large.v[-1] = self.v_f
