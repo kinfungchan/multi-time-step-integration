@@ -75,9 +75,9 @@ class Multistep:
         self.v_f = np.zeros(1)
         self.u_f = np.zeros(1)
 
-    def multistep_CDM(self):
+    def Cho_multistep(self):
         """
-        Integrate the Domain using the PFPB Scheme
+        Integrate the Domain using the CDM Scheme
         """
         invM_L = np.linalg.inv(self.Large.M)
         invM_S = np.linalg.inv(self.Small.M)
@@ -120,14 +120,13 @@ class Multistep:
         
             # Solution of Linear Problem
             # Explicit Method
-            if (self.Small.beta == 0.0):
-                a_njS_S = at_njS_S - np.dot(invM_S, (self.B_S * Lambda_njS_S))   
+            a_njS_S = at_njS_S - np.dot(invM_S, (self.B_S * Lambda_njS_S))   
 
             # Calculation of Correctors
             v_njS_S = vt_njS_S + a_njS_S * self.Small.gamma * self.Small.dt
 
-            # Update State Variables        
-            self.Small.u = ut_njS_S 
+            # Update State Variables   
+            self.Small.u = ut_njS_S
             self.Small.v = v_njS_S
             self.Small.a = a_njS_S
             self.Small.t = self.Small.t + self.Small.dt
@@ -157,15 +156,14 @@ class Multistep:
        
         # Solution of Linear Problem
         # Explicit Method
-        if (self.Large.beta == 0.0):
-            at_n1L_L = np.linalg.solve(self.Large.M, self.Large.f_ext - np.dot(self.Large.K, ut_n1L_L))
-            at_n1L_L[0] = 0.0
-            a_n1L_L = at_n1L_L - np.dot(invM_L, (self.B_L * Lambda_njS_L))            
+        at_n1L_L = np.linalg.solve(self.Large.M, self.Large.f_ext - np.dot(self.Large.K, ut_n1L_L))
+        at_n1L_L[0] = 0.0
+        a_n1L_L = at_n1L_L - np.dot(invM_L, (self.B_L * Lambda_njS_L))            
 
         v_n1L_L = vt_n1L_L + a_n1L_L  * self.Large.gamma * self.Large.dt
 
         # Update State Variables        
-        self.Large.u = ut_n1L_L
+        self.Large.u = ut_n1L_L 
         self.Large.v = v_n1L_L
         self.Large.assemble_vbcs(self.Large.t)
         self.Large.a = a_n1L_L 
@@ -213,7 +211,7 @@ if __name__ == '__main__':
 
     # Integrate over time
     while Domain_L.t < 0.0015:
-        full_Domain.multistep_CDM()
+        full_Domain.Cho_multistep()
         print("Time: ", Domain_L.t)
         if Domain_L.n % 10 == 0: 
             bar.plot_accel()
