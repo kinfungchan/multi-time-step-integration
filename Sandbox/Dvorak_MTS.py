@@ -78,10 +78,15 @@ class Multistep:
         self.M_f = (self.L_S * (1 / self.BMB_S) *  self.L_S) + (self.L_L * (1 / self.BMB_L) *  self.L_S)
         self.invM_f = 1 / self.M_f
 
+        # Region
+        self.Lambda_n1r_L = 0.0
+        self.Lambda_n1r_S = 0.0
+
         # Frames
         self.a_f = np.zeros(1) 
         self.v_f = np.zeros(1)
         self.u_f = np.zeros(1)
+        self.t_f = 0.0
 
         # Clocks
         self.t_s_act = 0.0 # Last known solution Time
@@ -92,10 +97,42 @@ class Multistep:
         self.dt_i_I = 0.0 # Interface time step: min{t_s_new - t_i_I}
 
     def solve_subframes(self):
-        pass
+        dt_frame = min(self.t_s_new, self.t_L_new) # 2.2 
 
-    def solve_subdomains(self):
-        pass
+        # Update Frame
+        self.t_f = self.t_f + dt_frame
+
+    def solve_subdomains(self, Domain: Domain, Lambda_n1r):
+        Domain.element_update()
+        
+        if (Domain.t == 0):
+            Domain.a = np.linalg.solve(Domain.M, Domain.f_ext - np.dot(Domain.K, Domain.u))
+            Domain.assemble_vbcs(Domain.t)
+        
+        Domain.a[0] = 0.0
+        # Compute Unconstrained Kinematics for Large Time Step
+        ut_n1L_L = Domain.u + Domain.dt * Domain.v + Domain.a * (0.5 - Domain.beta) * Domain.dt**2
+        vt_n1L_L = Domain.v + Domain.a * (1 - Domain.gamma) * Domain.dt
+       
+        # Solution of Linear Problem
+        # Explicit Method
+        at_n1L_L = np.linalg.solve(Domain.M, Domain.f_ext - np.dot(Domain.K, ut_n1L_L))
+        at_n1L_L[0] = 0.0
+        a_n1L_L = at_n1L_L - np.dot(self.invM_L, (self.B_L * Lambda_n1r))            
+
+        v_n1L_L = vt_n1L_L + a_n1L_L  * Domain.gamma * Domain.dt
+
+        # Update State Variables        
+        Domain.u = ut_n1L_L # Need to constrain u?
+        Domain.v = v_n1L_L
+        Domain.assemble_vbcs(Domain.t)
+        Domain.a = a_n1L_L 
+
+        Domain.u[-1] = self.u_f
+        Domain.v[-1] = self.v_f
+
+        Domain.t = Domain.t + Domain.dt
+        Domain.n += 1
 
     def Dvorak_multistep(self):
         """
@@ -104,64 +141,68 @@ class Multistep:
 
         k = 0
 
-        while (self.t_s_new <= self.t_L_new + 1e-12):
-            '''
-            Update of Small Domain
-            '''
-            self.Small.element_update()
-
-            if (self.Small.t == 0):
-                self.Small.a = np.linalg.solve(self.Small.M, self.Small.f_ext - np.dot(self.Small.K, self.Small.u))
-
-            # Compute Unconstrained Kinematics for Small Time Step
-            ut_njS_S = self.Small.u + self.Small.dt * self.Small.v + self.Small.a * (0.5 - self.Small.beta) * self.Small.dt**2
-            at_njS_S = np.linalg.solve(self.Small.M, self.Small.f_ext - np.dot(self.Small.K, ut_njS_S))            
+        while (self.t_s_new <= self.t_L_new + 1e-12):       
 
             '''
             Solution of Solvable Subframes
             '''
             # Extract Last 3x3 in Large M, Large K and Last 3x1 in Large f_ext
-            E1E2_SmallM = self.Small.M[:3, :3]
-            E1E2_Smallf_ext = self.Small.f_ext[:3]
-            E1E2_SmallK = self.Small.K[:3, :3]
-            E1E2_LargeM = self.Large.M[-3:, -3:]
-            E1E2_Largef_ext = self.Large.f_ext[-3:]
-            E1E2_LargeK = self.Large.K[-3:, -3:]
+            M_S_r = self.Small.M[:3, :3]
+            f_ext_S_r = self.Small.f_ext[:3]
+            K_S_r = self.Small.K[:3, :3]
+            M_L_r = self.Large.M[-3:, -3:]
+            f_ext_L_r = self.Large.f_ext[-3:]
+            K_L_r = self.Large.K[-3:, -3:]
             # Step 1.1 Predict subframe kinematics
-            E1E2_ut_njS_S = self.Small.u[:3] + self.Small.dt * self.Small.v[:3] + self.Small.a[:3] * (0.5 - self.Small.beta) * self.Small.dt**2
-            E1E2_ut_njS_L = self.Large.u[-3:] + self.Large.dt * self.Large.v[-3:] + self.Large.a[-3:] * (0.5 - self.Large.beta) * self.Large.dt**2
+            ut_njS_S_r = self.Small.u[:3] + self.Small.dt * self.Small.v[:3] + self.Small.a[:3] * (0.5 - self.Small.beta) * self.Small.dt**2
+            ut_njS_L_r = self.Large.u[-3:] + self.Large.dt * self.Large.v[-3:] + self.Large.a[-3:] * (0.5 - self.Large.beta) * self.Large.dt**2
             # Step 1.2 Evaluate Acceleration of both interface regions
-            E1E2_at_njS_S = np.linalg.solve(E1E2_SmallM, E1E2_Smallf_ext - np.dot(E1E2_SmallK, E1E2_ut_njS_S))
-            E1E2_at_njS_L = np.linalg.solve(E1E2_LargeM, E1E2_Largef_ext - np.dot(E1E2_LargeK, E1E2_ut_njS_L)) 
-            E1E2_B_S = self.B_S[:3]
-            E1E2_B_L = self.B_L[-3:]
+            at_njS_S_r = np.linalg.solve(M_S_r, f_ext_S_r - np.dot(K_S_r, ut_njS_S_r))
+            at_njS_L_r = np.linalg.solve(M_L_r, f_ext_L_r - np.dot(K_L_r, ut_njS_L_r)) 
+            B_S_r = self.B_S[:3]
+            B_L_r = self.B_L[-3:]
             
-            Bat_njS_S = np.dot(np.transpose(E1E2_B_S), E1E2_at_njS_S)
-            Bat_njS_L = np.dot(np.transpose(E1E2_B_L), E1E2_at_njS_L)
+            Bat_njS_S = np.dot(np.transpose(B_S_r), at_njS_S_r)
+            Bat_njS_L = np.dot(np.transpose(B_L_r), at_njS_L_r)
 
             f_n1_f = (self.L_S * (1 / self.BMB_S) *  Bat_njS_S) + (self.L_L * (1 / self.BMB_L) *  Bat_njS_L)  # Summation of Internal forces # 2.(c)
             a_n1_f = self.invM_f * f_n1_f # Evaluate Frame Acceleration Explicitly # 2.(d)
-            v_n1_f = np.dot(np.transpose(self.B_S), self.Small.v) + (0.5 * self.Small.dt * (np.dot(np.transpose(self.B_S), self.Small.a) + a_n1_f)) # 2.(e)
-            u_n1_f = np.dot(np.transpose(self.B_S), self.Small.u) + self.Small.dt * v_n1_f # 2.(f)
+            v_n1_f = np.dot(np.transpose(self.B_S), self.Small.v) + (np.dot(np.transpose(self.B_S), self.Small.a) * (1 - self.Small.gamma) * self.Small.dt)
+            v_n1_f += a_n1_f * self.Small.gamma * self.Small.dt  # 2.(e)
+            u_n1_f = np.dot(np.transpose(self.B_S), self.Small.u) + self.Small.dt * v_n1_f # 2.(f) next time step!
+
+            # Update Frame
+            self.a_f = a_n1_f
+            self.v_f = v_n1_f
+            self.u_f = np.dot(np.transpose(B_S_r), ut_njS_S_r)
 
             ## Solution of the Complementary Large Interface Region (2 Elements)
             # Compute Lagrange Multipliers Explicitly
-            Lambda_n1r_L = (1 / self.BMB_L) * (Bat_njS_L - a_n1_f) # 3.(b)
-            Lambda_n1r_S = -Lambda_n1r_L
+            self.Lambda_n1r_L = (1 / self.BMB_L) * (Bat_njS_L - a_n1_f) # 3.(b)
+            self.Lambda_n1r_S = -self.Lambda_n1r_L
             # Solution of Large E1E2
-            E1E2_a_njS_L =  E1E2_at_njS_L - np.dot(np.linalg.inv(E1E2_LargeM), (E1E2_B_L * Lambda_n1r_L)) # 3.(c)
+            E1E2_a_njS_L =  at_njS_L_r - np.dot(np.linalg.inv(M_L_r), (B_L_r * self.Lambda_n1r_L)) # 3.(c)
             E1E2_v_njS_L = self.Large.v[-3:] + 0.5 * self.Small.dt * (self.Large.a[-3:] + E1E2_a_njS_L) # 3.(d)
             # 3.(e) avoid drifting
 
             '''
             Solution of selected Subdomain
             '''
+            self.Small.element_update()
+
+            if (self.Small.t == 0):
+                self.Small.a = np.linalg.solve(self.Small.M, self.Small.f_ext - np.dot(self.Small.K, self.Small.u)) 
+                 
+            # Compute Unconstrained Kinematics for Small Time Step
+            ut_njS_S = self.Small.u + self.Small.dt * self.Small.v + self.Small.a * (0.5 - self.Small.beta) * self.Small.dt**2
+            at_njS_S = np.linalg.solve(self.Small.M, self.Small.f_ext - np.dot(self.Small.K, ut_njS_S))  
+
             # Calculation of Predictors
             vt_njS_S = self.Small.v + self.Small.a * (1 - self.Small.gamma) * self.Small.dt
         
             # Solution of Linear Problem
             # Explicit Method
-            a_njS_S = at_njS_S - np.dot(self.invM_S, (self.B_S * Lambda_n1r_S))   
+            a_njS_S = at_njS_S - np.dot(self.invM_S, (self.B_S * self.Lambda_n1r_S))   
 
             # Calculation of Correctors
             v_njS_S = vt_njS_S + a_njS_S * self.Small.gamma * self.Small.dt
@@ -176,50 +217,16 @@ class Multistep:
             self.t_s_act = self.Small.t 
             self.t_s_new = self.t_s_act + self.Small.dt 
 
-            # Update Frame
-            self.a_f = a_n1_f
-            self.v_f = self.Small.v[0]
-            self.u_f = self.Small.u[0]
             '''
             Evaluate Scenario A or B to determine roles of Subdomains (Large or Small)
             '''
-
             # Update Small Loop Counter
             k += 1
-
+            
         '''
         Update of Large Domain
         '''
-        self.Large.element_update()
-        
-        if (self.Large.t == 0):
-            self.Large.a = np.linalg.solve(self.Large.M, self.Large.f_ext - np.dot(self.Large.K, self.Large.u))
-            self.Large.assemble_vbcs(self.Large.t)
-        
-        self.Large.a[0] = 0.0
-        # Compute Unconstrained Kinematics for Large Time Step
-        ut_n1L_L = self.Large.u + self.Large.dt * self.Large.v + self.Large.a * (0.5 - self.Large.beta) * self.Large.dt**2
-        vt_n1L_L = self.Large.v + self.Large.a * (1 - self.Large.gamma) * self.Large.dt
-       
-        # Solution of Linear Problem
-        # Explicit Method
-        at_n1L_L = np.linalg.solve(self.Large.M, self.Large.f_ext - np.dot(self.Large.K, ut_n1L_L))
-        at_n1L_L[0] = 0.0
-        a_n1L_L = at_n1L_L - np.dot(self.invM_L, (self.B_L * Lambda_n1r_L))            
-
-        v_n1L_L = vt_n1L_L + a_n1L_L  * self.Large.gamma * self.Large.dt
-
-        # Update State Variables        
-        self.Large.u = ut_n1L_L # Need to constrain u?
-        self.Large.v = v_n1L_L
-        self.Large.assemble_vbcs(self.Large.t)
-        self.Large.a = a_n1L_L 
-
-        self.Large.u[-1] = self.u_f
-        self.Large.v[-1] = self.v_f
-
-        self.Large.t = self.Large.t + self.Large.dt
-        self.Large.n += 1
+        self.solve_subdomains(self.Large, self.Lambda_n1r_L) # pass the lagrange multiplier
 
         self.t_L_act = self.Large.t 
         self.t_L_new = self.t_L_act + self.Large.dt
