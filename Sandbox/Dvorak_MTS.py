@@ -102,34 +102,37 @@ class Multistep:
         # Update Frame
         self.t_f = self.t_f + dt_frame
 
-    def solve_subdomains(self, Domain: Domain, Lambda_n1r):
+    def solve_subdomains(self, Domain: Domain, Lambda_n1r, invM_r, B_r):
         Domain.element_update()
         
         if (Domain.t == 0):
             Domain.a = np.linalg.solve(Domain.M, Domain.f_ext - np.dot(Domain.K, Domain.u))
             Domain.assemble_vbcs(Domain.t)
         
-        Domain.a[0] = 0.0
-        # Compute Unconstrained Kinematics for Large Time Step
-        ut_n1L_L = Domain.u + Domain.dt * Domain.v + Domain.a * (0.5 - Domain.beta) * Domain.dt**2
-        vt_n1L_L = Domain.v + Domain.a * (1 - Domain.gamma) * Domain.dt
-       
-        # Solution of Linear Problem
-        # Explicit Method
-        at_n1L_L = np.linalg.solve(Domain.M, Domain.f_ext - np.dot(Domain.K, ut_n1L_L))
-        at_n1L_L[0] = 0.0
-        a_n1L_L = at_n1L_L - np.dot(self.invM_L, (self.B_L * Lambda_n1r))            
+        if (Domain.label == 'Large'):
+            Domain.a[0] = 0.0
+        # Compute Unconstrained Kinematics for Subdomains Time Step
+        ut_n1_r = Domain.u + Domain.dt * Domain.v + Domain.a * (0.5 - Domain.beta) * Domain.dt**2
+        vt_n1_r = Domain.v + Domain.a * (1 - Domain.gamma) * Domain.dt
+        at_n1_r = np.linalg.solve(Domain.M, Domain.f_ext - np.dot(Domain.K, ut_n1_r))
 
-        v_n1L_L = vt_n1L_L + a_n1L_L  * Domain.gamma * Domain.dt
+        # Solution of Linear Problem
+        # Explicit Method        
+        if (Domain.label == 'Large'):
+            at_n1_r[0] = 0.0        
+        a_n1_r = at_n1_r - np.dot(invM_r, (B_r * Lambda_n1r))            
+
+        v_n1_r = vt_n1_r + a_n1_r  * Domain.gamma * Domain.dt
 
         # Update State Variables        
-        Domain.u = ut_n1L_L # Need to constrain u?
-        Domain.v = v_n1L_L
+        Domain.u = ut_n1_r # Need to constrain u?
+        Domain.v = v_n1_r
         Domain.assemble_vbcs(Domain.t)
-        Domain.a = a_n1L_L 
+        Domain.a = a_n1_r 
 
-        Domain.u[-1] = self.u_f
-        Domain.v[-1] = self.v_f
+        if (Domain.label == 'Large'):
+            Domain.u[-1] = self.u_f
+            Domain.v[-1] = self.v_f
 
         Domain.t = Domain.t + Domain.dt
         Domain.n += 1
@@ -188,31 +191,7 @@ class Multistep:
             '''
             Solution of selected Subdomain
             '''
-            self.Small.element_update()
-
-            if (self.Small.t == 0):
-                self.Small.a = np.linalg.solve(self.Small.M, self.Small.f_ext - np.dot(self.Small.K, self.Small.u)) 
-                 
-            # Compute Unconstrained Kinematics for Small Time Step
-            ut_njS_S = self.Small.u + self.Small.dt * self.Small.v + self.Small.a * (0.5 - self.Small.beta) * self.Small.dt**2
-            at_njS_S = np.linalg.solve(self.Small.M, self.Small.f_ext - np.dot(self.Small.K, ut_njS_S))  
-
-            # Calculation of Predictors
-            vt_njS_S = self.Small.v + self.Small.a * (1 - self.Small.gamma) * self.Small.dt
-        
-            # Solution of Linear Problem
-            # Explicit Method
-            a_njS_S = at_njS_S - np.dot(self.invM_S, (self.B_S * self.Lambda_n1r_S))   
-
-            # Calculation of Correctors
-            v_njS_S = vt_njS_S + a_njS_S * self.Small.gamma * self.Small.dt
-
-            # Update State Variables   
-            self.Small.u = ut_njS_S 
-            self.Small.v = v_njS_S
-            self.Small.a = a_njS_S
-            self.Small.t = self.Small.t + self.Small.dt
-            self.Small.n += 1
+            self.solve_subdomains(self.Small, self.Lambda_n1r_S, self.invM_S, self.B_S)
 
             self.t_s_act = self.Small.t 
             self.t_s_new = self.t_s_act + self.Small.dt 
@@ -226,7 +205,7 @@ class Multistep:
         '''
         Update of Large Domain
         '''
-        self.solve_subdomains(self.Large, self.Lambda_n1r_L) # pass the lagrange multiplier
+        self.solve_subdomains(self.Large, self.Lambda_n1r_L, self.invM_L, self.B_L) # pass the lagrange multiplier
 
         self.t_L_act = self.Large.t 
         self.t_L_new = self.t_L_act + self.Large.dt
