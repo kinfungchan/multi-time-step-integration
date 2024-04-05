@@ -79,7 +79,14 @@ class Multistep:
 
         # Region
         self.Lambda_n1r_L = 0.0
+        self.a_r_L = np.zeros(3)
+        self.v_r_L = np.zeros(3)
+        self.u_r_L = np.zeros(3)
+
         self.Lambda_n1r_S = 0.0
+        self.a_r_S = np.zeros(3)
+        self.v_r_S = np.zeros(3)
+        self.u_r_S = np.zeros(3)
 
         # Frames
         self.a_f = np.zeros(1) 
@@ -105,15 +112,20 @@ class Multistep:
         M_L_r = self.Large.M[-3:, -3:]
         f_ext_L_r = self.Large.f_ext[-3:]
         K_L_r = self.Large.K[-3:, -3:]
+
         # Step 1.1 Predict subframe kinematics
-        ut_njS_S_r = self.Small.u[:3] + self.dt_f * self.Small.v[:3] + self.Small.a[:3] * (0.5 - self.Small.beta) * self.dt_f**2
+        ut_njS_S_r = self.u_r_S + self.dt_f * self.Small.v[:3] + self.Small.a[:3] * (0.5 - self.Small.beta) * self.dt_f**2
         ut_njS_L_r = self.Large.u[-3:] + self.Large.dt * self.Large.v[-3:] + self.Large.a[-3:] * (0.5 - self.Large.beta) * self.Large.dt**2
+        
+        self.v_r_S += self.a_r_S * (1 - self.Small.gamma) * self.dt_f 
+        self.v_r_L += self.a_r_L * (1 - self.Large.gamma) * self.dt_f
+
         # Step 1.2 Evaluate Acceleration of both interface regions
         at_njS_S_r = np.linalg.solve(M_S_r, f_ext_S_r - np.dot(K_S_r, ut_njS_S_r))
         at_njS_L_r = np.linalg.solve(M_L_r, f_ext_L_r - np.dot(K_L_r, ut_njS_L_r)) 
+
         B_S_r = self.B_S[:3]
-        B_L_r = self.B_L[-3:]
-        
+        B_L_r = self.B_L[-3:]        
         Bat_njS_S = np.dot(np.transpose(B_S_r), at_njS_S_r)
         Bat_njS_L = np.dot(np.transpose(B_L_r), at_njS_L_r)
 
@@ -128,14 +140,21 @@ class Multistep:
         self.v_f = v_n1_f
         self.u_f = np.dot(np.transpose(B_S_r), ut_njS_S_r)
 
-        ## Solution of the Complementary Large Interface Region (2 Elements)
+        ## Solution of the Interface Regions (2 Elements)
         # Compute Lagrange Multipliers Explicitly
         self.Lambda_n1r_L = (1 / self.BMB_L) * (Bat_njS_L - a_n1_f) # 3.(b)
         self.Lambda_n1r_S = -self.Lambda_n1r_L
-        # Solution of Large E1E2
-        E1E2_a_njS_L =  at_njS_L_r - np.dot(np.linalg.inv(M_L_r), (B_L_r * self.Lambda_n1r_L)) # 3.(c)
-        E1E2_v_njS_L = self.Large.v[-3:] + 0.5 * self.dt_f * (self.Large.a[-3:] + E1E2_a_njS_L) # 3.(d)
-        # 3.(e) avoid drifting
+
+        # Solution of Small Region
+        self.u_r_S = ut_njS_S_r
+        self.a_r_S = at_njS_S_r - np.dot(np.linalg.inv(M_S_r), (B_S_r * self.Lambda_n1r_S)) 
+        self.v_r_S += self.a_r_S * self.Small.gamma * self.dt_f 
+
+        # Solution of Large Region
+        self.u_r_L = ut_njS_L_r
+        self.a_r_L = at_njS_L_r - np.dot(np.linalg.inv(M_L_r), (B_L_r * self.Lambda_n1r_L))
+        self.v_r_L += self.a_r_L * self.Large.gamma * self.dt_f
+        # 3.(e) avoid drifting here too
 
         # Update Frame
         self.t_f = self.t_f + self.dt_f
@@ -236,22 +255,22 @@ if __name__ == '__main__':
         full_Domain.time_equivalence()
         print("Time: ", Domain_L.t)
         if Domain_L.n % 10 == 0: 
-            # bar.plot_accel()
-            # bar.plot_vel()
-            # bar.plot_disp()
-            # bar.plot_stress()
+            bar.plot_accel()
+            bar.plot_vel()
+            bar.plot_disp()
+            bar.plot_stress()
 
-            bar.plot_interface_accel()
-            bar.plot_interface_vel()
-            bar.plot_interface_disp()
+            # bar.plot_interface_accel()
+            # bar.plot_interface_vel()
+            # bar.plot_interface_disp()
 
-    # bar.create_gif('DvoFEM1DAccel.gif', bar.filenames_accel)
-    # bar.create_gif('DvoFEM1DVel.gif', bar.filenames_vel)
-    # bar.create_gif('DvoFEM1DDisp.gif', bar.filenames_disp)
-    # bar.create_gif('DvoFEM1DStress.gif', bar.filenames_stress)
+    bar.create_gif('DvoFEM1DAccel.gif', bar.filenames_accel)
+    bar.create_gif('DvoFEM1DVel.gif', bar.filenames_vel)
+    bar.create_gif('DvoFEM1DDisp.gif', bar.filenames_disp)
+    bar.create_gif('DvoFEM1DStress.gif', bar.filenames_stress)
     
-    bar.create_gif('DvoFEM1DAccel_r.gif', bar.filenames_accel_r)
-    bar.create_gif('DvoFEM1DVel_r.gif', bar.filenames_vel_r)
-    bar.create_gif('DvoFEM1DDisp_r.gif', bar.filenames_disp_r)
+    # bar.create_gif('DvoFEM1DAccel_r.gif', bar.filenames_accel_r)
+    # bar.create_gif('DvoFEM1DVel_r.gif', bar.filenames_vel_r)
+    # bar.create_gif('DvoFEM1DDisp_r.gif', bar.filenames_disp_r)
 
 
