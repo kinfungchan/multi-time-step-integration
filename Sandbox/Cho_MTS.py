@@ -233,6 +233,12 @@ class Visualise_MTS:
         self.filenames_disp = []
         self.filenames_stress = []    
 
+        # Interface
+        self.filenames_accel_r = []
+        self.filenames_vel_r = []
+        self.filenames_disp_r = []
+        self.filenames_stress_r = []
+
     def plot(self, variable_L, variable_S, position_L, position_S, title, xlabel, ylabel, filenames):
         filenames.append(f'FEM1D_{title}{self.domain.Large.n}.png')
         plt.style.use('ggplot')
@@ -256,6 +262,15 @@ class Visualise_MTS:
 
     def plot_stress(self):
         self.plot(self.domain.Large.stress, self.domain.Small.stress, self.domain.Large.midposition, self.domain.Small.midposition, "Stress", "Domain Position (m)", "Stress (Pa)", self.filenames_stress)
+
+    def plot_interface_accel(self):
+        self.plot(self.domain.Large.a[-3:], self.domain.Small.a[:3], self.domain.Large.position[-3:], self.domain.Small.position[:3], "InterfaceAcceleration", "Domain Position (m)", "Acceleration (m/s^2)", self.filenames_accel_r)
+
+    def plot_interface_vel(self):
+        self.plot(self.domain.Large.v[-3:], self.domain.Small.v[:3], self.domain.Large.position[-3:], self.domain.Small.position[:3], "InterfaceVelocity", "Domain Position (m)", "Velocity (m/s)", self.filenames_vel_r)
+
+    def plot_interface_disp(self):
+        self.plot(self.domain.Large.u[-3:], self.domain.Small.u[:3], self.domain.Large.position[-3:], self.domain.Small.position[:3], "InterfaceDisplacement", "Domain Position (m)", "Displacement (m)", self.filenames_disp_r)
 
     def create_gif(self, gif_name, filenames):
         with imageio.get_writer(gif_name, mode='I') as writer:
