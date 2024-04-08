@@ -82,11 +82,13 @@ class Multistep:
         self.a_r_L = np.zeros(3)
         self.v_r_L = np.zeros(3)
         self.u_r_L = np.zeros(3)
+        self.t_r_L = 0.0
 
         self.Lambda_n1r_S = 0.0
         self.a_r_S = np.zeros(3)
         self.v_r_S = np.zeros(3)
         self.u_r_S = np.zeros(3)
+        self.t_r_S = 0.0
 
         # Frames
         self.a_f = np.zeros(1) 
@@ -133,7 +135,6 @@ class Multistep:
         a_n1_f = self.invM_f * f_n1_f # Evaluate Frame Acceleration Explicitly # 2.(d)
         v_n1_f = np.dot(np.transpose(self.B_S), self.Small.v) + (np.dot(np.transpose(self.B_S), self.Small.a) * (1 - self.Small.gamma) * self.dt_f)
         v_n1_f += a_n1_f * self.Small.gamma * self.dt_f  # 2.(e)
-        u_n1_f = np.dot(np.transpose(self.B_S), self.Small.u) + self.dt_f * v_n1_f # 2.(f) next time step!
 
         # Update Frame
         self.a_f = a_n1_f
@@ -149,12 +150,16 @@ class Multistep:
         self.u_r_S = ut_njS_S_r
         self.a_r_S = at_njS_S_r - np.dot(np.linalg.inv(M_S_r), (B_S_r * self.Lambda_n1r_S)) 
         self.v_r_S += self.a_r_S * self.Small.gamma * self.dt_f 
+        self.t_r_S += self.dt_f
 
         # Solution of Large Region
         self.u_r_L = ut_njS_L_r
         self.a_r_L = at_njS_L_r - np.dot(np.linalg.inv(M_L_r), (B_L_r * self.Lambda_n1r_L))
         self.v_r_L += self.a_r_L * self.Large.gamma * self.dt_f
+        self.t_r_L += self.dt_f
         # 3.(e) avoid drifting here too
+        self.u_r_L[-1] = self.u_f
+        self.v_r_L[-1] = self.v_f
 
         # Update Frame
         self.t_f = self.t_f + self.dt_f
@@ -190,7 +195,6 @@ class Multistep:
         if (Domain.label == 'Large'):
             Domain.u[-1] = self.u_f
             Domain.v[-1] = self.v_f
-
         Domain.t = Domain.t + Domain.dt
         Domain.n += 1
 
@@ -214,7 +218,7 @@ class Multistep:
         self.t_L_act = self.Large.t 
         self.t_L_new = self.t_L_act + self.Large.dt
 
-    def time_equivalence(self):
+    def time_equivalence(self): # This should be done for regions, as subdomains do not need to be time equivalent
         # Check for Time Equivalence
         if abs(self.Large.t - self.Small.t) > 1e-12:
             print("Time Discrepancy")
