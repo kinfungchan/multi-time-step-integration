@@ -192,9 +192,20 @@ class Multistep:
         Domain.assemble_vbcs(Domain.t)
         Domain.a = a_n1_r 
 
-        if (Domain.label == 'Large'):
-            Domain.u[-1] = self.u_f
-            Domain.v[-1] = self.v_f
+        # Correct Drifting
+        Domain.u = np.dot(np.identity(Domain.n_nodes) - np.outer(B_r, np.transpose(B_r)) , Domain.u) # I - BB^T * u
+        Domain.u += np.dot(B_r, self.u_f) # + BL * u_f
+        Domain.v = np.dot(np.identity(Domain.n_nodes) - np.outer(B_r, np.transpose(B_r)) , Domain.v) # I - BB^T * v
+        Domain.v += np.dot(B_r, self.v_f) # + BL * v_f
+
+        # Reset Region 
+        self.u_r_S[0] = self.u_f
+        self.v_r_S[0] = self.v_f
+        self.a_r_S[0] = self.a_f
+        self.u_r_L[-1] = self.u_f
+        self.v_r_L[-1] = self.v_f
+        self.a_r_L[-1] = self.a_f
+
         Domain.t = Domain.t + Domain.dt
         Domain.n += 1
 
