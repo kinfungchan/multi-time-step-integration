@@ -17,33 +17,7 @@ Engineering, 413, p.116110.
 Dvorák, Radim, et al. "ASYNCHRONOUSLY IN TIME INTEGRATED INTERFACE DYNAMICS 
 PROBLEM WHILE MAINTAINING ZERO INTERFACE ENERGY.", pp9-10 2023.
 
-
 """
-
-def solve_Interface_EOM(BMB_L, BMB_S, L_L, L_S, Bat_L, Bat_S):
-    """
-    Solve the Interface Equations of Motion
-    """
-    # Set up 3x3 Matrix
-    iEOM = np.empty((3, 3))
-    iEOM[0, 0] = BMB_L; iEOM[0, 1] = 0; iEOM[0, 2] = L_L
-    iEOM[1, 0] = 0; iEOM[1, 1] = BMB_S; iEOM[1, 2] = L_S
-    iEOM[2, 0] = L_L; iEOM[2, 1] = L_S; iEOM[2, 2] = 0
-
-    # Set up 3x1 Vector for Unconstrained Accelerations
-    a = np.empty(3)
-    a[0] = Bat_L
-    a[1] = Bat_S
-    a[2] = 0
-
-    # Solve for Lagrange Multipliers and Frame Acceleration
-    x = np.linalg.solve(iEOM, a)
-    Lambda_L = x[0]
-    Lambda_S = x[1]
-    a_f = x[2]
-
-    # Return Lagrange Multipliers and Frame Acceleration
-    return Lambda_L, Lambda_S, a_f
 
 class Multistep:
     """
@@ -223,6 +197,9 @@ class Multistep:
             self.solve_subdomains(self.Small, self.Lambda_n1r_S, self.invM_S, self.B_S)
             self.t_s_act = self.Small.t 
             self.t_s_new = self.t_s_act + self.Small.dt 
+        
+        # Solution of Solvable Subframes
+        self.solve_subframes()
 
         # Solution of Large Solvable Subdomain   
         self.solve_subdomains(self.Large, self.Lambda_n1r_L, self.invM_L, self.B_L)
@@ -240,8 +217,9 @@ if __name__ == '__main__':
     # Initialise Domains
     # Large Domain
     E_L = 0.02 * 10**9 # 0.02GPa
-    E_s = 0.18 * 10**9 # Integer Time Step Ratio = 3
     rho_L = 8000 # 8000kg/m^3
+    E_S = 0.18 * 10**9 # Integer Time Step Ratio = 3    
+    # E_S = ((450/np.pi)**2) * rho_L # Non Integer Time Step Ratio = 2.86
     length_L = 50 * 10**-3 # 50mm
     length_S = 2 * 50 * 10**-3 # 100mm
     area_L = 1 # 1m^2
@@ -255,7 +233,7 @@ if __name__ == '__main__':
     Domain_L.compute_mass_matrix()
     Domain_L.compute_stiffness_matrix()
     # Small Domain
-    Domain_S = Domain('Small', E_s, rho_L, length_S, area_L, num_elements_S, safety_Param, None)
+    Domain_S = Domain('Small', E_S, rho_L, length_S, area_L, num_elements_S, safety_Param, None)
     Domain_S.compute_mass_matrix()
     Domain_S.compute_stiffness_matrix()
     # Multistep Combined Domains
