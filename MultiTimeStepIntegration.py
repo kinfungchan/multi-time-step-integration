@@ -36,6 +36,9 @@ class MultiTimeStep:
         # Pullback Values
         self.large_alpha = 0.0
         self.small_alpha = 0.0
+        # Time Step History
+        self.steps_L = np.array([0.0])
+        self.steps_S = np.array([0.0])
 
     def calc_timestep_ratios(self):
         self.small_tpredicted = self.small.t + self.small.dt
@@ -60,6 +63,7 @@ class MultiTimeStep:
             self.small.a_bc.accelerations.append(accelCoupling)
 
             self.small.single_tstep_integrate()
+            self.steps_S = np.append(self.steps_S, self.small.dt)
             self.small.assemble_internal()
             self.calc_timestep_ratios()
 
@@ -73,6 +77,7 @@ class MultiTimeStep:
             self.small.dt = self.alpha_s * self.small.dt
 
         self.large.single_tstep_integrate()
+        self.steps_L = np.append(self.steps_L, self.large.dt)
         self.large.assemble_internal()        
         self.calc_timestep_ratios()
 
@@ -106,14 +111,32 @@ class Visualise_MultiTimestep:
         for filename in set(self.filenames):
             os.remove(filename)
 
+    def plot_time_steps(self):
+        x = ['L', 'S']
+        n_steps = 10 # Number of Steps to Plot
+        data = np.empty((n_steps, 2))
+        for i in range(n_steps):
+            data[i] = np.array([self.updated.steps_L[i], 
+                                self.updated.steps_S[i]])
+            
+        plt.figure(figsize=(10, 6))
+        for i in range(1, n_steps):        
+            plt.bar(x, data[i], bottom=np.sum(data[:i], axis=0), color=plt.cm.tab10(i), label=f'Local Step {i}')
+
+        plt.ylabel('Time (s)')
+        plt.title('Time Steps taken for New Multi-step')
+        plt.legend()
+        plt.show()
+
 def newCoupling():
     # Utilise same element size, drive time step ratio with Co.
-    nElemLarge = 250 
-    E_L = 207
-    E_s = 1000
-    rho = 7.83e-6
-    Courant = 0.9
-    Length = 125
+    nElemLarge = 300
+    E_L = 0.02e9
+    # E_s = 0.18e9    
+    rho = 8000
+    E_s = (np.pi/0.02)**2 * rho # Non Integer Time Step Ratio = pi
+    Courant = 0.5
+    Length = 50e-3
     propTime = 1.75 * Length * np.sqrt(rho / E_L)    
     def vel(t): return vbc.velbcSquareWave(t, 2 * Length , E_L, rho)
     accelBoundaryCondtions = abc(list(),list())
@@ -127,6 +150,7 @@ def newCoupling():
         if (upd_fullDomain.large.n % 5 == 0):
             plotfullDomain.plot()
     plotfullDomain.create_gif()
+    plotfullDomain.plot_time_steps()
 
 if __name__ == "__main__":
     newCoupling()

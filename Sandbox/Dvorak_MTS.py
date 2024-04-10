@@ -240,10 +240,8 @@ class Multistep:
                                 self.steps_S[i]])
             
         plt.figure(figsize=(10, 6))
-        # Color for each step (better gradient than cmap)
-        colors = ['red', 'blue', 'green', 'orange', 'purple', 'yellow', 'cyan', 'magenta', 'brown', 'pink'] 
-        for i in range(n_steps):        
-            plt.bar(x, data[i], bottom=np.sum(data[:i], axis=0), color=colors[i], label=f'Local Step {i+1}')
+        for i in range(1, n_steps):        
+            plt.bar(x, data[i], bottom=np.sum(data[:i], axis=0), color=plt.cm.tab10(i), label=f'Local Step {i}')
 
         plt.ylabel('Time (s)')
         plt.title('Time Steps taken for Dvorak Multi-step')
@@ -256,7 +254,7 @@ if __name__ == '__main__':
     E_L = 0.02 * 10**9 # 0.02GPa
     rho_L = 8000 # 8000kg/m^3
     # E_S = 0.18 * 10**9 # Integer Time Step Ratio = 3    
-    E_S = ((450/np.pi)**2) * rho_L # Non Integer Time Step Ratio = 2.86
+    E_S = (np.pi/0.02)**2 * rho_L # Non Integer Time Step Ratio = pi
     length_L = 50 * 10**-3 # 50mm
     length_S = 2 * 50 * 10**-3 # 100mm
     area_L = 1 # 1m^2
