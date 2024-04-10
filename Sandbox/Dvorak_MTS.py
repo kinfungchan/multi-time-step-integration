@@ -2,6 +2,7 @@ import numpy as np
 from SingleDomain import Domain
 from Cho_MTS import Visualise_MTS
 from BoundaryConditions import  VelBoundaryConditions as vbc
+import matplotlib.pyplot as plt
 
 """
 In this notebook we look to reimplement Asynchronous Direct Time
@@ -78,6 +79,13 @@ class Multistep:
         self.t_L_new = self.t_L_act + self.Large.dt # Time of interest
         self.dt_f = 0.0 # Interface time step
 
+        # List of Time Histories
+        self.steps_f = np.array([0.0])
+        self.steps_r_L = np.array([0.0])
+        self.steps_r_S = np.array([0.0])
+        self.steps_L = np.array([0.0])
+        self.steps_S = np.array([0.0])
+
     def solve_subframes(self):
         self.dt_f = min(self.t_s_new - self.t_f, self.t_L_new - self.t_f) # 2.2 
 
@@ -125,12 +133,14 @@ class Multistep:
         self.a_r_S = at_njS_S_r - np.dot(np.linalg.inv(M_S_r), (B_S_r * self.Lambda_n1r_S)) 
         self.v_r_S += self.a_r_S * self.Small.gamma * self.dt_f 
         self.t_r_S += self.dt_f
+        self.steps_r_S = np.append(self.steps_r_S, self.dt_f)
 
         # Solution of Large Region
         self.u_r_L = ut_njS_L_r
         self.a_r_L = at_njS_L_r - np.dot(np.linalg.inv(M_L_r), (B_L_r * self.Lambda_n1r_L))
         self.v_r_L += self.a_r_L * self.Large.gamma * self.dt_f
         self.t_r_L += self.dt_f
+        self.steps_r_L = np.append(self.steps_r_L, self.dt_f)
         # 3.(e) avoid drifting here too
         self.u_r_L[-1] = self.u_f
         self.v_r_L[-1] = self.v_f
@@ -138,6 +148,7 @@ class Multistep:
         # Update Frame
         self.t_f = self.t_f + self.dt_f
         self.n_f += 1
+        self.steps_f = np.append(self.steps_f, self.dt_f)
 
     def solve_subdomains(self, Domain: Domain, Lambda_n1r, invM_r, B_r):
         Domain.element_update()
@@ -182,6 +193,10 @@ class Multistep:
 
         Domain.t = Domain.t + Domain.dt
         Domain.n += 1
+        if (Domain.label == 'Large'):
+            self.steps_L = np.append(self.steps_L, Domain.dt)
+        else:
+            self.steps_S = np.append(self.steps_S, Domain.dt)
 
     def Dvorak_multistep(self):
         """
@@ -208,18 +223,40 @@ class Multistep:
 
     def time_equivalence(self): # This should be done for regions, as subdomains do not need to be time equivalent
         # Check for Time Equivalence
-        if abs(self.Large.t - self.Small.t) > 1e-12:
+        if abs(self.t_r_L - self.t_r_S) > 1e-12:
             print("Time Discrepancy")
             print("Large Time:", full_Domain.Large.t, "Small Time:", full_Domain.Small.t)
-            exit()
+            exit() 
+       
+    def plot_time_steps(self):
+        x = ['Frame', 'RegionL', 'L', 'RegionS', 'S']
+        n_steps = 10 # Number of Steps to Plot
+        data = np.empty((n_steps, 5))
+        for i in range(n_steps):
+            data[i] = np.array([self.steps_f[i], 
+                                self.steps_r_L[i], 
+                                self.steps_L[i], 
+                                self.steps_r_S[i], 
+                                self.steps_S[i]])
+            
+        plt.figure(figsize=(10, 6))
+        # Color for each step (better gradient than cmap)
+        colors = ['red', 'blue', 'green', 'orange', 'purple', 'yellow', 'cyan', 'magenta', 'brown', 'pink'] 
+        for i in range(n_steps):        
+            plt.bar(x, data[i], bottom=np.sum(data[:i], axis=0), color=colors[i], label=f'Local Step {i+1}')
+
+        plt.ylabel('Time (s)')
+        plt.title('Time Steps taken for Dvorak Multi-step')
+        plt.legend()
+        plt.show()
 
 if __name__ == '__main__':
     # Initialise Domains
     # Large Domain
     E_L = 0.02 * 10**9 # 0.02GPa
     rho_L = 8000 # 8000kg/m^3
-    E_S = 0.18 * 10**9 # Integer Time Step Ratio = 3    
-    # E_S = ((450/np.pi)**2) * rho_L # Non Integer Time Step Ratio = 2.86
+    # E_S = 0.18 * 10**9 # Integer Time Step Ratio = 3    
+    E_S = ((450/np.pi)**2) * rho_L # Non Integer Time Step Ratio = 2.86
     length_L = 50 * 10**-3 # 50mm
     length_S = 2 * 50 * 10**-3 # 100mm
     area_L = 1 # 1m^2
@@ -266,4 +303,6 @@ if __name__ == '__main__':
     # bar.create_gif('DvoFEM1DVel_r.gif', bar.filenames_vel_r)
     # bar.create_gif('DvoFEM1DDisp_r.gif', bar.filenames_disp_r)
 
+    # Plot Time Histories
+    full_Domain.plot_time_steps()
 
