@@ -86,6 +86,33 @@ class Multistep:
         self.steps_L = np.array([0.0])
         self.steps_S = np.array([0.0])
 
+    def set_current_values(self):
+        self.Large.a = self.a_curr_L
+        self.Large.v = self.v_curr_L
+        self.Large.u = self.u_curr_L
+        self.Large.stress = self.stress_curr_L
+
+    def store_previous_values(self):
+        self.a_prev_L = self.Large.a
+        self.v_prev_L = self.Large.v
+        self.u_prev_L = self.Large.u
+        self.stress_prev_L = self.Large.stress
+        self.t_prev_L = self.Large.t
+
+    def store_current_values(self):
+        self.a_curr_L = self.Large.a
+        self.v_curr_L = self.Large.v
+        self.u_curr_L = self.Large.u
+        self.stress_curr_L = self.Large.stress
+        self.t_curr_L = self.Large.t
+
+    def interp_large_to_small(self):
+        self.Large.a = self.a_prev_L + (self.Small.t - self.t_prev_L) * (self.Large.a - self.a_prev_L) / (self.Large.t - self.t_prev_L)
+        self.Large.v = self.v_prev_L + (self.Small.t - self.t_prev_L) * (self.Large.v - self.v_prev_L) / (self.Large.t - self.t_prev_L)
+        self.Large.u = self.u_prev_L + (self.Small.t - self.t_prev_L) * (self.Large.u - self.u_prev_L) / (self.Large.t - self.t_prev_L)
+        self.Large.stress = self.stress_prev_L + (self.Small.t - self.t_prev_L) * (self.Large.stress - self.stress_prev_L) / (self.Large.t - self.t_prev_L)
+        self.t_interp = self.Small.t
+
     def solve_subframes(self):
         self.dt_f = min(self.t_s_new - self.t_f, self.t_L_new - self.t_f) # 2.2 
 
@@ -151,6 +178,7 @@ class Multistep:
         self.steps_f = np.append(self.steps_f, self.dt_f)
 
     def solve_subdomains(self, Domain: Domain, Lambda_n1r, invM_r, B_r):
+        self.store_previous_values()
         Domain.element_update()
         
         if (Domain.t == 0):
@@ -283,23 +311,29 @@ if __name__ == '__main__':
         full_Domain.time_equivalence()
         print("Time: ", Domain_L.t)
         if Domain_L.n % 10 == 0: 
+            # Interpolate Large Values to Small Time
+            full_Domain.store_current_values()
+            full_Domain.interp_large_to_small()
+
             bar.plot_accel()
             bar.plot_vel()
             bar.plot_disp()
             bar.plot_stress()
 
-            # bar.plot_interface_accel()
-            # bar.plot_interface_vel()
-            # bar.plot_interface_disp()
+            bar.plot_interface_accel()
+            bar.plot_interface_vel()
+            bar.plot_interface_disp()
+
+            full_Domain.set_current_values()
 
     bar.create_gif('DvoFEM1DAccel.gif', bar.filenames_accel)
     bar.create_gif('DvoFEM1DVel.gif', bar.filenames_vel)
     bar.create_gif('DvoFEM1DDisp.gif', bar.filenames_disp)
     bar.create_gif('DvoFEM1DStress.gif', bar.filenames_stress)
     
-    # bar.create_gif('DvoFEM1DAccel_r.gif', bar.filenames_accel_r)
-    # bar.create_gif('DvoFEM1DVel_r.gif', bar.filenames_vel_r)
-    # bar.create_gif('DvoFEM1DDisp_r.gif', bar.filenames_disp_r)
+    bar.create_gif('DvoFEM1DAccel_r.gif', bar.filenames_accel_r)
+    bar.create_gif('DvoFEM1DVel_r.gif', bar.filenames_vel_r)
+    bar.create_gif('DvoFEM1DDisp_r.gif', bar.filenames_disp_r)
 
     # Plot Time Histories
     full_Domain.plot_time_steps()
