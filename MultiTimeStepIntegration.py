@@ -40,6 +40,11 @@ class MultiTimeStep:
         self.steps_L = np.array([0.0])
         self.steps_Gamma = np.array([0.0])
         self.steps_S = np.array([0.0])
+        # Calculate Drifting
+        self.a_drift = np.array([0.0])
+        self.u_drift = np.array([0.0])
+        self.v_drift = np.array([0.0])
+        self.t_sync = np.array([0.0])
 
     def calc_timestep_ratios(self):
         self.small_tTrial = self.small.t + self.small.dt
@@ -85,7 +90,15 @@ class MultiTimeStep:
 
         # Integrate Large Domain
         self.large.single_tstep_integrate()
+        # Enforce continuity
+        self.large.u[-1] = self.small.u[0]
+        self.large.v[-1] = self.small.v[0]
+
         self.steps_L = np.append(self.steps_L, self.large.dt)
+        self.a_drift =  np.append(self.a_drift, self.large.a[-1] - self.small.a[0])
+        self.u_drift =  np.append(self.u_drift, self.large.u[-1] - self.small.u[0])
+        self.v_drift =  np.append(self.v_drift, self.large.v[-1] - self.small.v[0])
+        self.t_sync =  np.append(self.t_sync, self.large.t)
         self.large.assemble_internal()        
         self.calc_timestep_ratios()
 
@@ -96,27 +109,41 @@ class Visualise_MultiTimestep:
     def __init__(self, upd_fullDomain: MultiTimeStep):
 
         self.updated = upd_fullDomain
-        self.filenames = []
+        self.filenames_accel = []
+        self.filenames_vel = []
+        self.filenames_disp = []
+        self.filenames_stress = []
 
-    def plot(self):
-        self.filenames.append(f'FEM1D{self.updated.large.n}.png')
+    def plot(self, variable_L, variable_S, position_L, position_S, title, xlabel, ylabel, filenames):
+        filenames.append(f'FEM1D_{title}{self.updated.large.n}.png')
         plt.style.use('ggplot')
-        plt.plot(self.updated.large.position, self.updated.large.v, "--")
-        plt.plot(self.updated.small.position + self.updated.large.L , self.updated.small.v, "--")
-        plt.title(f"1D Wave Propagation through Heterogeneous Media", fontsize=9)
-        plt.xlabel("Domain Position (mm)", fontsize=9)
-        plt.ylabel("Velocity (mm/ms)", fontsize=9)
-        plt.legend([f"Updated Large Time Step Domain", "Updated Small Time Step Domain"])
-        plt.savefig(f'FEM1D{self.updated.large.n}.png')
+        plt.plot(position_L, variable_L)
+        plt.plot([position + self.updated.large.L for position in position_S], variable_S) 
+        plt.title(title,fontsize=12)
+        plt.xlabel(xlabel)
+        plt.ylabel(ylabel)
+        plt.legend(["Time: " + format(self.updated.large.t * 1e6, ".1f") + "us"])
+        plt.savefig(f'FEM1D_{title}{self.updated.large.n}.png')
         plt.close()
 
-    def create_gif(self):
-        with imageio.get_writer('Updated_Multi-time-step.gif', mode='I') as writer:
-            for filename in self.filenames:
+    def plot_accel(self):
+        self.plot(self.updated.large.a, self.updated.small.a, self.updated.large.position, self.updated.small.position, "Acceleration", "Domain Position (m)", "Acceleration (m/s^2)", self.filenames_accel)
+
+    def plot_vel(self):
+        self.plot(self.updated.large.v, self.updated.small.v, self.updated.large.position, self.updated.small.position,  "Velocity", "Domain Position (m)", "Velocity (m/s)", self.filenames_vel)
+
+    def plot_disp(self):
+        self.plot(self.updated.large.u, self.updated.small.u, self.updated.large.position, self.updated.small.position, "Displacement", "Domain Position (m)", "Displacement (m)", self.filenames_disp)
+
+    def plot_stress(self):
+        self.plot(self.updated.large.stress, self.updated.small.stress, self.updated.large.midposition, self.updated.small.midposition, "Stress", "Domain Position (m)", "Stress (Pa)", self.filenames_stress)
+
+    def create_gif(self, gif_name, filenames):
+        with imageio.get_writer(gif_name, mode='I') as writer:
+            for filename in filenames:
                 image = imageio.imread(filename)
                 writer.append_data(image)
-
-        for filename in set(self.filenames):
+        for filename in set(filenames):
             os.remove(filename)
 
     def plot_time_steps(self):
@@ -135,6 +162,26 @@ class Visualise_MultiTimestep:
         plt.ylabel('Time (s)')
         plt.title('Time Steps taken for New Multi-step')
         plt.legend()
+        plt.show()
+
+    def plot_drift(self):
+        # Plot X Axis Sync Times and Y Axis Drift
+        plt.plot(self.updated.t_sync, self.updated.a_drift)
+        plt.xlabel("Time (ms)")
+        plt.ylabel("Acceleration Drift (m/s^2)")
+        plt.title("Acceleration Drift between Large and Small Domains")
+        plt.show()
+
+        plt.plot(self.updated.t_sync, self.updated.u_drift)
+        plt.xlabel("Time (ms)")
+        plt.ylabel("Displacement Drift (mm)")
+        plt.title("Displacement Drift between Large and Small Domains")
+        plt.show()
+
+        plt.plot(self.updated.t_sync, self.updated.v_drift)
+        plt.xlabel("Time (ms)")
+        plt.ylabel("Velocity Drift (mm/ms)")
+        plt.title("Velocity Drift between Large and Small Domains")
         plt.show()
 
 def newCoupling():
@@ -156,10 +203,20 @@ def newCoupling():
     # Solve Loop
     while(upd_fullDomain.large.t <= upd_fullDomain.large.tfinal):
         upd_fullDomain.integrate()
+        print("Time: ", upd_fullDomain.large.t)
         if (upd_fullDomain.large.n % 5 == 0):
-            plotfullDomain.plot()
-    plotfullDomain.create_gif()
+            plotfullDomain.plot_accel()
+            plotfullDomain.plot_vel()
+            plotfullDomain.plot_disp()
+            plotfullDomain.plot_stress()
+
+    plotfullDomain.create_gif('Updated_Multi-time-step_accel.gif', plotfullDomain.filenames_accel)
+    plotfullDomain.create_gif('Updated_Multi-time-step.gif', plotfullDomain.filenames_vel)
+    plotfullDomain.create_gif('Updated_Multi-time-step_disp.gif', plotfullDomain.filenames_disp)
+    plotfullDomain.create_gif('Updated_Multi-time-step_stress.gif', plotfullDomain.filenames_stress)
+
     plotfullDomain.plot_time_steps()
+    plotfullDomain.plot_drift()
 
 if __name__ == "__main__":
     newCoupling()
