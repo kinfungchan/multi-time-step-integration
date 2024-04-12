@@ -29,8 +29,8 @@ class MultiTimeStep:
         self.small = smallDomain
         self.large.mass[-1] += self.small.mass[0] 
         # Time step Ratio Computations
-        self.large_tpredicted = 0.0
-        self.small_tpredicted = 0.0
+        self.large_tTrial = 0.0
+        self.small_tTrial = 0.0
         self.nextTimeStepRatio = 0.0 
         self.currTimeStepRatio = 0.0
         # Pullback Values
@@ -38,13 +38,28 @@ class MultiTimeStep:
         self.small_alpha = 0.0
         # Time Step History
         self.steps_L = np.array([0.0])
+        self.steps_Gamma = np.array([0.0])
         self.steps_S = np.array([0.0])
 
     def calc_timestep_ratios(self):
-        self.small_tpredicted = self.small.t + self.small.dt
-        self.large_tpredicted = self.large.t + self.large.dt
-        self.currTimeStepRatio = (self.small.t - self.large.t) / (self.large_tpredicted - self.large.t)
-        self.nextTimeStepRatio = ((self.small.t + self.small.dt) - self.large.t) / (self.large_tpredicted - self.large.t)
+        self.small_tTrial = self.small.t + self.small.dt
+        self.large_tTrial = self.large.t + self.large.dt
+        self.currTimeStepRatio = (self.small.t - self.large.t) / (self.large_tTrial - self.large.t)
+        self.nextTimeStepRatio = ((self.small.t + self.small.dt) - self.large.t) / (self.large_tTrial - self.large.t)
+
+    def update_small_domain(self):
+        largeForce = self.large.f_int[-1]
+        largeMass = self.large.mass[-1]
+        def accelCoupling(): return -largeForce / largeMass
+
+        self.small.a_bc.indexes.append(0)
+        self.small.a_bc.accelerations.append(accelCoupling)
+        self.steps_Gamma = np.append(self.steps_Gamma, self.small.dt)
+
+        self.small.single_tstep_integrate()
+        self.steps_S = np.append(self.steps_S, self.small.dt)
+        self.small.assemble_internal()
+        self.calc_timestep_ratios()
 
     def integrate(self):
     
@@ -55,27 +70,20 @@ class MultiTimeStep:
             self.calc_timestep_ratios()
 
         while (self.nextTimeStepRatio <= 1 or (self.currTimeStepRatio <= 1 and self.nextTimeStepRatio <= 1.000001)):
-            largeForce = self.large.f_int[-1]
-            largeMass = self.large.mass[-1]
-            def accelCoupling(): return -largeForce / largeMass
-
-            self.small.a_bc.indexes.append(0)
-            self.small.a_bc.accelerations.append(accelCoupling)
-
-            self.small.single_tstep_integrate()
-            self.steps_S = np.append(self.steps_S, self.small.dt)
-            self.small.assemble_internal()
-            self.calc_timestep_ratios()
+            # Integrate Small Domain
+            self.update_small_domain()
 
         # Compute Pullback Values
-        self.alpha_L = 1 - ((self.large_tpredicted - self.small.t)/(self.large_tpredicted - self.large.t))
-        self.alpha_s = 1 - ((self.small_tpredicted - self.large_tpredicted)/(self.small_tpredicted - self.small.t))
+        self.alpha_L = 1 - ((self.large_tTrial - self.small.t)/(self.large_tTrial - self.large.t))
+        self.alpha_s = 1 - ((self.small_tTrial - self.large_tTrial)/(self.small_tTrial - self.small.t))
 
         if (self.alpha_L >= self.alpha_s):
             self.large.dt = self.alpha_L * self.large.dt
         elif (self.alpha_s > self.alpha_L):
             self.small.dt = self.alpha_s * self.small.dt
+            self.update_small_domain()
 
+        # Integrate Large Domain
         self.large.single_tstep_integrate()
         self.steps_L = np.append(self.steps_L, self.large.dt)
         self.large.assemble_internal()        
@@ -112,11 +120,12 @@ class Visualise_MultiTimestep:
             os.remove(filename)
 
     def plot_time_steps(self):
-        x = ['L', 'S']
+        x = ['L', 'Interface', 'S']
         n_steps = 10 # Number of Steps to Plot
-        data = np.empty((n_steps, 2))
+        data = np.empty((n_steps, 3))
         for i in range(n_steps):
             data[i] = np.array([self.updated.steps_L[i], 
+                                self.updated.steps_Gamma[i],
                                 self.updated.steps_S[i]])
             
         plt.figure(figsize=(10, 6))
@@ -141,7 +150,7 @@ def newCoupling():
     def vel(t): return vbc.velbcSquareWave(t, 2 * Length , E_L, rho)
     accelBoundaryCondtions = abc(list(),list())
     upd_largeDomain = SimpleIntegrator("updated", E_L, rho, Length, 1, nElemLarge, propTime, vbc([0], [vel]), None, Co=Courant)
-    upd_smallDomain = SimpleIntegrator("updated", E_s, rho, Length * 2, 1, nElemLarge, propTime, None, accelBoundaryCondtions, Co=Courant)
+    upd_smallDomain = SimpleIntegrator("updated", E_s, rho, Length * 2, 1, nElemLarge * 2, propTime, None, accelBoundaryCondtions, Co=Courant)
     upd_fullDomain = MultiTimeStep(upd_largeDomain, upd_smallDomain)
     plotfullDomain = Visualise_MultiTimestep(upd_fullDomain)
     # Solve Loop
