@@ -3,6 +3,7 @@ from SingleDomain import Domain
 from Cho_PFPB import Visualise_MTS
 from BoundaryConditions import  VelBoundaryConditions as vbc
 import matplotlib.pyplot as plt
+from Utils import exportCSV
 
 """
 In this notebook we look to reimplement Asynchronous Direct Time
@@ -220,13 +221,6 @@ class Multistep:
         self.solve_subdomains(self.Large, self.Lambda_n1r_L, self.invM_L, self.B_L)
         self.t_L_act = self.Large.t 
         self.t_L_new = self.t_L_act + self.Large.dt
-
-    def time_equivalence(self): # This should be done for regions, as subdomains do not need to be time equivalent
-        # Check for Time Equivalence
-        if abs(self.t_r_L - self.t_r_S) > 1e-12:
-            print("Time Discrepancy")
-            print("Large Time:", full_Domain.Large.t, "Small Time:", full_Domain.Small.t)
-            exit() 
        
     def plot_time_steps(self):
         x = ['Frame', 'RegionL', 'L', 'RegionS', 'S']
@@ -248,7 +242,7 @@ class Multistep:
         plt.legend()
         plt.show()
 
-if __name__ == '__main__':
+def DvorakCoupling():
     # Initialise Domains
     # Large Domain
     E_L = 0.02 * 10**9 # 0.02GPa
@@ -280,7 +274,6 @@ if __name__ == '__main__':
     # Integrate over time
     while Domain_L.t < 0.0015:
         full_Domain.Dvorak_multistep()
-        full_Domain.time_equivalence()
         print("Time: ", Domain_L.t)
         if Domain_L.n % 10 == 0: 
             bar.plot_accel()
@@ -288,6 +281,9 @@ if __name__ == '__main__':
             bar.plot_disp()
             bar.plot_stress()
 
+        if Domain_L.n % 600 == 0:
+            exportCSV(Domain_L, Domain_S)
+            print("CSV Time: ", Domain_L.t)
             # bar.plot_interface_accel()
             # bar.plot_interface_vel()
             # bar.plot_interface_disp()
@@ -304,3 +300,5 @@ if __name__ == '__main__':
     # Plot Time Histories
     full_Domain.plot_time_steps()
 
+if __name__ == '__main__':
+    DvorakCoupling()

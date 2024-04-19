@@ -2,8 +2,7 @@ import numpy as np
 from SingleDomain import Domain
 from Cho_PFPB import Visualise_MTS
 from BoundaryConditions import  VelBoundaryConditions as vbc
-import imageio
-import os
+from Utils import exportCSV
 
 """
 In this notebook we look to reimplement CDM Multistep Time Integration
@@ -174,19 +173,13 @@ class Multistep:
         self.Large.t = self.Large.t + self.Large.dt
         self.Large.n += 1
 
-        # Check for Time Equivalence
-        if abs(self.Large.t - self.Small.t) > 1e-10:
-            print("Time Discrepancy")
-            print("Large Time:", full_Domain.Large.t, "Small Time:", full_Domain.Small.t)
-            exit()
-
-
-if __name__ == '__main__':
+def ChoCoupling():
     # Initialise Domains
     # Large Domain
     E_L = 0.02 * 10**9 # 0.02GPa
-    E_s = 0.18 * 10**9 # Integer Time Step Ratio = 3
     rho_L = 8000 # 8000kg/m^3
+    # E_S = 0.18 * 10**9 # Integer Time Step Ratio = 3    
+    E_S = (np.pi/0.02)**2 * rho_L # Non Integer Time Step Ratio = pi
     length_L = 50 * 10**-3 # 50mm
     length_S = 2 * 50 * 10**-3 # 100mm
     area_L = 1 # 1m^2
@@ -200,11 +193,13 @@ if __name__ == '__main__':
     Domain_L.compute_mass_matrix()
     Domain_L.compute_stiffness_matrix()
     # Small Domain
-    Domain_S = Domain('Small', E_s, rho_L, length_S, area_L, num_elements_S, safety_Param, None)
+    Domain_S = Domain('Small', E_S, rho_L, length_S, area_L, num_elements_S, safety_Param, None)
     Domain_S.compute_mass_matrix()
     Domain_S.compute_stiffness_matrix()
     # Multistep Combined Domains
-    full_Domain = Multistep(Domain_L, Domain_S, 3)
+    m_int = np.ceil(Domain_L.dt / Domain_S.dt)
+    Domain_S.dt = Domain_L.dt / m_int
+    full_Domain = Multistep(Domain_L, Domain_S, m_int)
 
     # Visualisation
     bar = Visualise_MTS(full_Domain)
@@ -219,8 +214,15 @@ if __name__ == '__main__':
             bar.plot_disp()
             bar.plot_stress()
 
+        if Domain_L.n % 600 == 0:
+            exportCSV(Domain_L, Domain_S)
+
     bar.create_gif('FEM1DAccel.gif', bar.filenames_accel)
     bar.create_gif('FEM1DVel.gif', bar.filenames_vel)
     bar.create_gif('FEM1DDisp.gif', bar.filenames_disp)
     bar.create_gif('FEM1DStress.gif', bar.filenames_stress)
 
+
+if __name__ == '__main__':
+    ChoCoupling()
+    

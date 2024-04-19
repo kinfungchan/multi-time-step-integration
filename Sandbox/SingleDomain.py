@@ -35,7 +35,7 @@ class Domain:
         self.label = label
         self.E = young
         self.rho = density
-        self.length = length
+        self.L = length
         self.A = area
         self.n_elems = num_elements
         self.C = 1.0
@@ -56,10 +56,6 @@ class Domain:
         self.K = np.zeros((self.n_nodes, self.n_nodes)) # Stiffness Matrix
         self.M = np.zeros((self.n_nodes, self.n_nodes)) # Mass Matrix
         self.f_ext = np.zeros(self.n_nodes) # External Force Vector
-
-        self.Lamda = np.zeros((self.n_nodes, self.n_nodes)) # Localised Lagrange Multipliers
-        self.B = np.zeros(self.n_nodes) # Boolean Vectors for Extracting Interface DOFs for each domain
-        self.L = np.zeros(self.n_nodes) # Boolean Vectors for Extracting Interface DOFs for global acc and disp
 
         self.beta = 0.0 # Coefficients for the Newmark Scheme, 0 for CDM
         self.gamma = 0.5
@@ -164,7 +160,7 @@ class Domain:
         self.u = self.u + (self.dt * self.v) + (beta_1 * (self.dt_C)**2 * self.a) + (beta_2 * (self.dt_C)**2 * a_nC)
         self.a = np.linalg.solve(self.M, self.f_ext - np.dot(self.K, self.u))
         self.a[0] = 0.0
-        self.v = self.v + self.dt * ((1 - self.gamma) * self.a + self.gamma * self.a)  
+        self.v = self.v + self.dt * ((1 - self.gamma) * self.a + self.gamma * self.a) # Should this used an old a too?
         self.assemble_vbcs(self.t)    
         self.t = self.t + self.dt
         self.n += 1
@@ -231,8 +227,8 @@ if __name__ == '__main__':
     # Integrate over time
     while Domain_L.t < 0.001:
         Domain_L.element_update()
-        # Domain_L.integrate_nb()
-        Domain_L.integrate_pfpb()
+        Domain_L.integrate_nb()
+        # Domain_L.integrate_pfpb()
         print("Time: ", Domain_L.t)
         if Domain_L.n % 20 == 0:
             bar.plot_accel()

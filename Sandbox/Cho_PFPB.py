@@ -243,7 +243,7 @@ class Visualise_MTS:
         filenames.append(f'FEM1D_{title}{self.domain.Large.n}.png')
         plt.style.use('ggplot')
         plt.plot(position_L, variable_L)
-        plt.plot([position + self.domain.Large.length for position in position_S], variable_S)  # Convert self.domain.Large.length to a list
+        plt.plot([position + self.domain.Large.L for position in position_S], variable_S)  # Convert self.domain.Large.L to a list
         plt.title(title,fontsize=12)
         plt.xlabel(xlabel)
         plt.ylabel(ylabel)
