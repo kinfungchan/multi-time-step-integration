@@ -1,6 +1,6 @@
 import numpy as np
 from SingleDomain import Domain
-from Cho_MTS import Visualise_MTS
+from Cho_PFPB import Visualise_MTS
 from BoundaryConditions import  VelBoundaryConditions as vbc
 import matplotlib.pyplot as plt
 

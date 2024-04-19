@@ -1,13 +1,12 @@
 import numpy as np
-import matplotlib.pyplot as plt
 from SingleDomain import Domain
-from SingleDomain import Visualise_Monolithic
+from Cho_PFPB import Visualise_MTS
 from BoundaryConditions import  VelBoundaryConditions as vbc
 import imageio
 import os
 
 """
-In this notebook we look to reimplement Explicit Multistep Time Integration
+In this notebook we look to reimplement CDM Multistep Time Integration
 for One-Dimensional Heterogeneous Solids from the following paper
 
 
@@ -64,7 +63,7 @@ class Multistep:
         # Large Domain Interface
         self.B_L = np.zeros(self.Large.n_nodes) # Boolean Vectors for Extracting Interface DOFs for each domain
         self.L_L = 1 # Boolean Vectors for Extracting Interface DOFs for global acc and disp
-        self.B_L[self.Large.n_nodes - 1] = 1
+        self.B_L[-1] = 1
 
         # Small Domain Interface
         self.B_S = np.zeros(self.Small.n_nodes) # Boolean Vectors for Extracting Interface DOFs for each domain
@@ -76,19 +75,9 @@ class Multistep:
         self.v_f = np.zeros(1)
         self.u_f = np.zeros(1)
 
-        # Time Integration Constants
-        self.theta = 0.5 # Average Displacement for Push-Forward Pullback
-        # For Total Lagrangian Formulation beta terms remain constant
-        self.alpha_L = self.Large.dt / self.Large.dt_C
-        self.beta1_L = (self.alpha_L / 6) * (3 * self.alpha_L + self.theta - (self.theta * self.alpha_L ** 2))
-        self.beta2_L = self.theta * (self.alpha_L / 6) * (self.alpha_L ** 2 - 1)
-        self.alpha_S = self.Small.dt / self.Small.dt_C
-        self.beta1_S = (self.alpha_S / 6) * (3 * self.alpha_S + self.theta - (self.theta * self.alpha_S ** 2))
-        self.beta2_S = self.theta * (self.alpha_S / 6) * (self.alpha_S ** 2 - 1) 
-
-    def multistep_pfpb(self):
+    def Cho_multistep(self):
         """
-        Integrate the Domain using the PFPB Scheme
+        Integrate the Domain using the CDM Scheme
         """
         invM_L = np.linalg.inv(self.Large.M)
         invM_S = np.linalg.inv(self.Small.M)
@@ -96,59 +85,50 @@ class Multistep:
         BMB_L = np.dot(np.transpose(self.B_L), np.dot(invM_L, self.B_L)) # B_S^T * M_S^-1 * B_S
 
         k = 0
-        prev_u_S = self.Small.u
-        prev_v_S = self.Small.v
-        prev_a_S = self.Small.a
 
         while (k < self.m):
             '''
             Update of Small Domain
             '''
             self.Small.element_update()
-            
+
             if (self.Small.t == 0):
                 self.Small.a = np.linalg.solve(self.Small.M, self.Small.f_ext - np.dot(self.Small.K, self.Small.u))
 
-            ## Push-forward Step for Small Courant Timestep nC_S
-            # Find Unconstrained values for small Courant timestep (tilda)
-            ut_nCS_S = self.Small.u + self.Small.dt_C * self.Small.v + self.Small.a * (0.5 * self.Small.dt_C**2)
-            at_nCS_S = np.linalg.solve(self.Small.M, self.Small.f_ext - np.dot(self.Small.K, ut_nCS_S))
+            # Compute Unconstrained Kinematics for Small Time Step
+            ut_njS_S = self.Small.u + self.Small.dt * self.Small.v + self.Small.a * (0.5 - self.Small.beta) * self.Small.dt**2
+            at_njS_S = np.linalg.solve(self.Small.M, self.Small.f_ext - np.dot(self.Small.K, ut_njS_S))            
 
+            # Extract Last 3x3 in Large M, Large K and Last 3x1 in Large f_ext
             E1E2_LargeM = self.Large.M[-3:, -3:]
             E1E2_Largef_ext = self.Large.f_ext[-3:]
             E1E2_LargeK = self.Large.K[-3:, -3:]
-            E1E2_ut_nCS_L = self.Large.u[-3:] + self.Small.dt_C * self.Large.v[-3:] + self.Large.a[-3:] * (0.5 * self.Small.dt_C**2)
-            E1E2_at_nCS_L = np.linalg.solve(E1E2_LargeM, E1E2_Largef_ext - np.dot(E1E2_LargeK, E1E2_ut_nCS_L))
+            E1E2_ut_njS_L = self.Large.u[-3:] + self.Large.dt * self.Large.v[-3:] + self.Large.a[-3:] * (0.5 - self.Large.beta) * self.Large.dt**2
+            E1E2_at_njS_L = np.linalg.solve(E1E2_LargeM, E1E2_Largef_ext - np.dot(E1E2_LargeK, E1E2_ut_njS_L)) 
             E1E2_B_L = self.B_L[-3:]
             
-            # Calculate the Lagrange Multipliers on Small Push-Forward Step (Courant Step)
-            Bat_nCS_S = np.dot(np.transpose(self.B_S), at_nCS_S)
-            Bat_nCS_L = np.dot(np.transpose(E1E2_B_L), E1E2_at_nCS_L)
-
-            Lambda_nCS_L, Lambda_nCS_S, a_nCS_f = solve_Interface_EOM(BMB_L, BMB_S, self.L_L, self.L_S, Bat_nCS_L , Bat_nCS_S)
-
-            a_nCS_S = at_nCS_S
-            a_nCS_S[0] = a_nCS_f
-
-            ## Pullback Step for actual Small Timestep nj_S 
-            # Find Unconstrained values for actual small timestep
-            ut_njS_S = self.Small.u + (self.Small.dt * self.Small.v) + (self.beta1_S * (self.Small.dt_C)**2 * self.Small.a) + (self.beta2_S * (self.Small.dt_C)**2 * at_nCS_S)
-            at_njS_S = np.linalg.solve(self.Small.M, self.Small.f_ext - np.dot(self.Small.K, ut_njS_S))
-
-            E1E2_ut_njS_L = self.Large.u[-3:] + (self.Small.dt * self.Large.v[-3:]) + (self.beta1_S * (self.Small.dt_C)**2 * self.Large.a[-3:]) + (self.beta2_S * (self.Small.dt_C)**2 * E1E2_at_nCS_L)
-            E1E2_at_njS_L = np.linalg.solve(E1E2_LargeM, E1E2_Largef_ext - np.dot(E1E2_LargeK, E1E2_ut_njS_L))
-
-            # Calculate the Lagrange Multipliers on Pullback Step
             Bat_njS_S = np.dot(np.transpose(self.B_S), at_njS_S)
             Bat_njS_L = np.dot(np.transpose(E1E2_B_L), E1E2_at_njS_L)
-            Lambda_njS_L, Lambda_njS_S, a_njS_f = solve_Interface_EOM(BMB_L, BMB_S, self.L_L, self.L_S, Bat_njS_L , Bat_njS_S)
+            # Compute Lagrange Multipliers and Frame Acceleration
+            Lambda_njS_L, Lambda_njS_S, a_njS_f = solve_Interface_EOM(BMB_L, BMB_S, self.L_L, self.L_S, Bat_njS_L , Bat_njS_S)    
 
-            # Update Small Domain
-            self.Small.u = self.Small.u + (self.Small.dt * self.Small.v) + (self.beta1_S * (self.Small.dt_C)**2 * self.Small.a) + (self.beta2_S * (self.Small.dt_C)**2 * a_nCS_S)
-            # self.Small.a = at_njS_S - np.dot(invM_S, self.B_S * Lambda_njS_S) #Corrective Acceleration != a_njS_f
-            self.Small.a = at_njS_S
-            self.Small.a[0] = a_njS_f
-            self.Small.v = self.Small.v + self.Small.dt * ((1 - self.Small.gamma) * self.Small.a + self.Small.gamma * self.Small.a) # Use of old a here?
+            if (self.Small.t == 0):
+                self.Small.a = np.linalg.solve(self.Small.M, self.Small.f_ext - np.dot(self.Small.K, self.Small.u)) 
+
+            # Calculation of Predictors
+            vt_njS_S = self.Small.v + self.Small.a * (1 - self.Small.gamma) * self.Small.dt
+        
+            # Solution of Linear Problem
+            # Explicit Method
+            a_njS_S = at_njS_S - np.dot(invM_S, (self.B_S * Lambda_njS_S))   
+
+            # Calculation of Correctors
+            v_njS_S = vt_njS_S + a_njS_S * self.Small.gamma * self.Small.dt
+
+            # Update State Variables   
+            self.Small.u = ut_njS_S
+            self.Small.v = v_njS_S
+            self.Small.a = a_njS_S
             self.Small.t = self.Small.t + self.Small.dt
             self.Small.n += 1
 
@@ -159,7 +139,7 @@ class Multistep:
 
             # Update Small Loop Counter
             k += 1
-
+            
         '''
         Update of Large Domain
         '''
@@ -169,53 +149,30 @@ class Multistep:
             self.Large.a = np.linalg.solve(self.Large.M, self.Large.f_ext - np.dot(self.Large.K, self.Large.u))
             self.Large.assemble_vbcs(self.Large.t)
         
-        ## Push-forward Step for Large Courant Timestep nC_L
         self.Large.a[0] = 0.0
-        # Find Unconstrained values for large Courant timestep (tilda)
-        ut_nCL_S = prev_u_S + self.Large.dt_C * prev_v_S + prev_a_S * (0.5 * self.Large.dt_C**2)
-        at_nCL_S = np.linalg.solve(self.Small.M, self.Small.f_ext - np.dot(self.Small.K, ut_nCL_S))
-        ut_nCL_L = self.Large.u + self.Large.dt_C * self.Large.v + self.Large.a * (0.5 * self.Large.dt_C**2)
-        at_nCL_L = np.linalg.solve(self.Large.M, self.Large.f_ext - np.dot(self.Large.K, ut_nCL_L))
-        at_nCL_L[0] = 0.0
+        # Compute Unconstrained Kinematics for Large Time Step
+        ut_n1L_L = self.Large.u + self.Large.dt * self.Large.v + self.Large.a * (0.5 - self.Large.beta) * self.Large.dt**2
+        vt_n1L_L = self.Large.v + self.Large.a * (1 - self.Large.gamma) * self.Large.dt
+       
+        # Solution of Linear Problem
+        # Explicit Method
+        at_n1L_L = np.linalg.solve(self.Large.M, self.Large.f_ext - np.dot(self.Large.K, ut_n1L_L))
+        at_n1L_L[0] = 0.0
+        a_n1L_L = at_n1L_L - np.dot(invM_L, (self.B_L * Lambda_njS_L))            
 
-        # Calculate the Lagrange Multipliers on Small Push-Forward Step (Courant Step)
-        Bat_nCL_S = np.dot(np.transpose(self.B_S), at_nCL_S)
-        Bat_nCL_L = np.dot(np.transpose(self.B_L), at_nCL_L)
-        Lambda_nCL_L, Lambda_nCL_S, a_nCL_f = solve_Interface_EOM(BMB_L, BMB_S, self.L_L, self.L_S, Bat_nCL_L , Bat_nCL_S)
+        v_n1L_L = vt_n1L_L + a_n1L_L  * self.Large.gamma * self.Large.dt
 
-        # Calculating constrained acceleration
-        a_nCL_S = at_nCL_S
-        a_nCL_S[0] = a_nCL_f
-        a_nCL_L = at_nCL_L
-        a_nCL_L[-1] = a_nCL_f
-        a_nCL_L[0] = 0.0
+        # Update State Variables        
+        self.Large.u = ut_n1L_L 
+        self.Large.v = v_n1L_L
+        self.Large.assemble_vbcs(self.Large.t)
+        self.Large.a = a_n1L_L 
 
-        ## Pullback Step for Large Timestep nj_L
-        # Find Unconstrained values for actual small timestep
-        ut_njL_S = prev_u_S + (self.Large.dt * prev_v_S) + (self.beta1_S * (self.Large.dt_C)**2 * prev_a_S) + (self.beta2_S * (self.Large.dt_C)**2 * at_nCL_S)
-        at_njL_S = np.linalg.solve(self.Small.M, self.Small.f_ext - np.dot(self.Small.K, ut_njL_S))
-        ut_njL_L = self.Large.u + (self.Large.dt * self.Large.v) + (self.beta1_S * (self.Large.dt_C)**2 * self.Large.a) + (self.beta2_S * (self.Large.dt_C)**2 * at_nCL_L)
-        at_njL_L = np.linalg.solve(self.Large.M, self.Large.f_ext - np.dot(self.Large.K, ut_njL_L))
-        at_njL_L[0] = 0.0
-
-        # Calculate the Lagrange Multipliers on Pullback Step
-        Lambda_njL_L = Lambda_njS_L
-        Lambda_njL_S = Lambda_njS_S
-        a_njL_f = a_njS_f
-
-        # Update Large Domain
-        self.Large.u = self.Large.u + (self.Large.dt * self.Large.v) + (self.beta1_S * (self.Large.dt_C)**2 * self.Large.a) + (self.beta2_S * (self.Large.dt_C)**2 * a_nCL_L)
-        self.Large.a = at_njL_L
-        self.Large.a[-1] = a_njL_f
-        self.Large.a[0] = 0.0
-        self.Large.v = self.Large.v + self.Large.dt * ((1 - self.Large.gamma) * self.Large.a + self.Large.gamma * self.Large.a) # Use of old a here?
-        self.Large.assemble_vbcs(self.Large.t)    
-        self.Large.t = self.Large.t + self.Large.dt
-        self.Large.n += 1
-
-        # Prevent Drifting with Small Frame
         self.Large.u[-1] = self.u_f
         self.Large.v[-1] = self.v_f
+
+        self.Large.t = self.Large.t + self.Large.dt
+        self.Large.n += 1
 
         # Check for Time Equivalence
         if abs(self.Large.t - self.Small.t) > 1e-10:
@@ -223,62 +180,6 @@ class Multistep:
             print("Large Time:", full_Domain.Large.t, "Small Time:", full_Domain.Small.t)
             exit()
 
-class Visualise_MTS:
-
-    def __init__(self, Domain: Multistep):
-
-        self.domain = Domain
-        self.filenames_accel = []
-        self.filenames_vel = []
-        self.filenames_disp = []
-        self.filenames_stress = []    
-
-        # Interface
-        self.filenames_accel_r = []
-        self.filenames_vel_r = []
-        self.filenames_disp_r = []
-        self.filenames_stress_r = []
-
-    def plot(self, variable_L, variable_S, position_L, position_S, title, xlabel, ylabel, filenames):
-        filenames.append(f'FEM1D_{title}{self.domain.Large.n}.png')
-        plt.style.use('ggplot')
-        plt.plot(position_L, variable_L)
-        plt.plot([position + self.domain.Large.length for position in position_S], variable_S)  # Convert self.domain.Large.length to a list
-        plt.title(title,fontsize=12)
-        plt.xlabel(xlabel)
-        plt.ylabel(ylabel)
-        plt.legend(["Time: " + format(self.domain.Large.t * 1e6, ".1f") + "us"])
-        plt.savefig(f'FEM1D_{title}{self.domain.Large.n}.png')
-        plt.close()
-
-    def plot_accel(self):
-        self.plot(self.domain.Large.a, self.domain.Small.a, self.domain.Large.position, self.domain.Small.position, "Acceleration", "Domain Position (m)", "Acceleration (m/s^2)", self.filenames_accel)
-
-    def plot_vel(self):
-        self.plot(self.domain.Large.v, self.domain.Small.v, self.domain.Large.position, self.domain.Small.position,  "Velocity", "Domain Position (m)", "Velocity (m/s)", self.filenames_vel)
-
-    def plot_disp(self):
-        self.plot(self.domain.Large.u, self.domain.Small.u, self.domain.Large.position, self.domain.Small.position,  "Displacement", "Domain Position (m)", "Displacement (m)", self.filenames_disp)
-
-    def plot_stress(self):
-        self.plot(self.domain.Large.stress, self.domain.Small.stress, self.domain.Large.midposition, self.domain.Small.midposition, "Stress", "Domain Position (m)", "Stress (Pa)", self.filenames_stress)
-
-    def plot_interface_accel(self):
-        self.plot(self.domain.Large.a[-3:], self.domain.Small.a[:3], self.domain.Large.position[-3:], self.domain.Small.position[:3], "InterfaceAcceleration", "Domain Position (m)", "Acceleration (m/s^2)", self.filenames_accel_r)
-
-    def plot_interface_vel(self):
-        self.plot(self.domain.Large.v[-3:], self.domain.Small.v[:3], self.domain.Large.position[-3:], self.domain.Small.position[:3], "InterfaceVelocity", "Domain Position (m)", "Velocity (m/s)", self.filenames_vel_r)
-
-    def plot_interface_disp(self):
-        self.plot(self.domain.Large.u[-3:], self.domain.Small.u[:3], self.domain.Large.position[-3:], self.domain.Small.position[:3], "InterfaceDisplacement", "Domain Position (m)", "Displacement (m)", self.filenames_disp_r)
-
-    def create_gif(self, gif_name, filenames):
-        with imageio.get_writer(gif_name, mode='I') as writer:
-            for filename in filenames:
-                image = imageio.imread(filename)
-                writer.append_data(image)
-        for filename in set(filenames):
-            os.remove(filename)
 
 if __name__ == '__main__':
     # Initialise Domains
@@ -310,7 +211,7 @@ if __name__ == '__main__':
 
     # Integrate over time
     while Domain_L.t < 0.0015:
-        full_Domain.multistep_pfpb()
+        full_Domain.Cho_multistep()
         print("Time: ", Domain_L.t)
         if Domain_L.n % 10 == 0: 
             bar.plot_accel()
