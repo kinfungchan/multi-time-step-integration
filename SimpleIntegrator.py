@@ -78,6 +78,12 @@ class SimpleIntegrator:
         self.internal_energy = []
         self.tot_energy = []
         self.timestamps = []
+        self.a_prev = np.zeros(self.n_nodes)
+        self.v_prev = np.zeros(self.n_nodes)
+        self.u_prev = np.zeros(self.n_nodes)
+        self.f_int_prev = np.zeros(self.n_nodes)
+        self.t_prev = 0
+
 
     def assemble_internal(self):
         if (self.formulation == "updated"):
@@ -132,7 +138,13 @@ class SimpleIntegrator:
             for counter in range(0, len(self.a_bc.indexes)):
                 self.a[self.a_bc.indexes[counter]] = self.a_bc.accelerations[counter]()
 
+    def save_prev(self):
+        self.a_prev, self.v_prev, self.u_prev = np.copy(self.a), np.copy(self.v), np.copy(self.u)
+        self.f_int_prev = np.copy(self.f_int)
+        self.t_prev = np.copy(self.t)
+
     def single_tstep_integrate(self):
+        self.save_prev()
         self.a = -self.f_int / self.mass
         self.assemble_abcs() 
         if self.n == 0:

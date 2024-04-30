@@ -1,7 +1,8 @@
 from SimpleIntegrator import SimpleIntegrator
 from BoundaryConditions import VelBoundaryConditions as vbc
 from BoundaryConditions import AccelBoundaryConditions as abc
-from Sandbox import exportCSV, writeCSV
+from Stability import Stability
+from Sandbox import exportCSV, writeCSV, vHalftoCSV
 import numpy as np
 import scipy.constants as sp
 import matplotlib.pyplot as plt
@@ -25,7 +26,7 @@ class MultiTimeStep:
     LARGE     |   SMALL
     *----*----*--*--*--*--*
     """
-    def __init__(self, largeDomain: SimpleIntegrator, smallDomain: SimpleIntegrator):
+    def __init__(self, largeDomain: SimpleIntegrator, smallDomain: SimpleIntegrator, stability: Stability):
         
         self.large = largeDomain
         self.small = smallDomain
@@ -44,11 +45,10 @@ class MultiTimeStep:
         self.steps_L = np.array([0.0])
         self.steps_S = np.array([0.0])
         
-        # Calculate Drifting
-        self.a_drift = np.array([0.0])
-        self.u_drift = np.array([0.0])
-        self.v_drift = np.array([0.0])
-        self.t_sync = np.array([0.0])
+        # Stability Calculations
+        self.stability = stability
+        self.ma_L_prev = 0.0
+        self.ma_S_prev = 0.0
         self.W_GammaL = np.array([0.0])
         self.W_GammaS = np.array([0.0])
 
@@ -62,10 +62,12 @@ class MultiTimeStep:
         self.currTimeStepRatio = (self.small.t - self.large.t) / (self.large_tTrial - self.large.t)
         self.nextTimeStepRatio = ((self.small.t + self.small.dt) - self.large.t) / (self.large_tTrial - self.large.t)
 
+    def accelCoupling(self): 
+        return -self.f_int_Gamma / self.mass_Gamma
+
     def update_small_domain(self):
-        def accelCoupling(): return -self.f_int_Gamma / self.mass_Gamma
         self.small.a_bc.indexes.append(0)
-        self.small.a_bc.accelerations.append(accelCoupling)
+        self.small.a_bc.accelerations.append(self.accelCoupling)
 
         self.small.single_tstep_integrate()
         self.steps_S = np.append(self.steps_S, self.small.dt)
@@ -81,12 +83,16 @@ class MultiTimeStep:
             self.f_int_Gamma = self.large.f_int[-1] + self.small.f_int[0]
             self.calc_timestep_ratios()
 
-        W_GammaS = 0.0
+        self.stability.W_GammaS_k = 0.0 # Zero each Large Time Step
         while (self.nextTimeStepRatio <= 1 or (self.currTimeStepRatio <= 1 and self.nextTimeStepRatio <= 1.000001)):
             # Integrate Small Domain
-            prev_fint = self.small.f_int[0]
             self.update_small_domain()
-            W_GammaS += (self.small.dt / 2) * self.small.v[0] * (prev_fint + self.small.f_int[0]) # Energy on Small Interface
+            # W_GammaS += (self.small.dt / 2) * self.small.v[0] * (self.small.f_int_prev[0] + self.small.f_int[0]) # Energy on Small Interface
+
+            self.stability.calc_Work_s(self.small.mass[0], self.small.a[0], self.ma_S_prev, #lu = (ma - f_int)u
+                                       self.small.f_int[0], self.small.f_int_prev[0], 
+                                       self.small.u[0], self.small.u_prev[0]) 
+            self.stability.t_small = np.append(self.stability.t_small, self.small.t)
 
         # Compute Pullback Values
         self.alpha_L = 1 - ((self.large_tTrial - self.small.t)/(self.large_tTrial - self.large.t))
@@ -96,37 +102,39 @@ class MultiTimeStep:
             self.large.dt = self.alpha_L * self.large.dt
         elif (self.alpha_s > self.alpha_L):
             self.small.dt = self.alpha_s * self.small.dt
-            prev_fint = self.small.f_int[0]
             self.update_small_domain()
-            W_GammaS += (self.small.dt / 2) * self.small.v[0] * (prev_fint + self.small.f_int[0]) # Energy on Small Interface
+            # W_GammaS += (self.small.dt / 2) * self.small.v[0] * (self.small.f_int_prev[0] + self.small.f_int[0]) # Energy on Small Interface
+
+            self.stability.calc_Work_s(self.small.mass[0], self.small.a[0], self.ma_S_prev, #lu = (ma - f_int)u
+                                       self.small.f_int[0], self.small.f_int_prev[0], 
+                                       self.small.u[0], self.small.u_prev[0]) 
 
         # Integrate Large Domain
-        prev_fint = self.large.f_int[-1]
-        def accelCoupling(): return -self.f_int_Gamma / self.mass_Gamma
         self.large.a_bc.indexes.append(-1)
-        self.large.a_bc.accelerations.append(accelCoupling)
+        self.large.a_bc.accelerations.append(self.accelCoupling)
 
         self.large.single_tstep_integrate()
-        # Enforce continuity
+        # # Enforce continuity
         self.large.u[-1] = self.small.u[0]
         self.large.v[-1] = self.small.v[0]
 
         self.min_dt = min(self.min_dt, self.small.dt, self.large.dt)
         self.steps_L = np.append(self.steps_L, self.large.dt)
         self.el_steps += self.large.n_elem
-        self.a_drift =  np.append(self.a_drift, self.large.a[-1] - self.small.a[0])
-        self.u_drift =  np.append(self.u_drift, self.large.u[-1] - self.small.u[0])
-        self.v_drift =  np.append(self.v_drift, self.large.v[-1] - self.small.v[0])
-        self.t_sync =  np.append(self.t_sync, self.large.t)
+        self.stability.calc_drift(self.large.a[-1], self.small.a[0], self.large.v[-1], self.small.v[0], self.large.u[-1], self.small.u[0], self.large.t)
         self.large.assemble_internal()        
         self.calc_timestep_ratios()
+        # W_GammaL = (self.large.dt / 2) * self.large.v[-1] * (self.large.f_int_prev[-1] + self.large.f_int[-1]) # Energy on Large Interface
 
-        self.f_int_Gamma = self.large.f_int[-1] + self.small.f_int[0]
+        self.stability.calc_Work_L(self.large.mass[-1], self.large.a[-1], self.ma_L_prev, #LU = (MA - F_INT)U
+                                   self.large.f_int[-1], self.large.f_int_prev[-1],
+                                   self.large.u[-1], self.large.u_prev[-1])
+        self.stability.calc_KE(self.large.mass[-1], self.large.v[-1], self.small.mass[0], self.small.v[0])
+        self.ma_S_prev = (self.small.mass[0] * (-self.f_int_Gamma / self.mass_Gamma))
+        self.ma_L_prev = (self.large.mass[-1] * (-self.f_int_Gamma / self.mass_Gamma))
 
-        W_GammaL = (self.large.dt / 2) * self.large.v[-1] * (prev_fint + self.large.f_int[-1]) # Energy on Large Interface
-        self.W_GammaL = np.append(self.W_GammaL, W_GammaL)
-        self.W_GammaS = np.append(self.W_GammaS, W_GammaS)
-
+        self.f_int_Gamma = self.large.f_int[-1] + self.small.f_int[0]       
+    
 class Visualise_MultiTimestep:
 
     def __init__(self, upd_fullDomain: MultiTimeStep):
@@ -186,27 +194,7 @@ class Visualise_MultiTimestep:
         plt.legend()
         plt.show()
 
-    def plot_drift(self):
-        # Plot X Axis Sync Times and Y Axis Drift
-        plt.plot(self.updated.t_sync, self.updated.a_drift)
-        plt.xlabel("Time (ms)")
-        plt.ylabel("Acceleration Drift (m/s^2)")
-        plt.title("Acceleration Drift between Large and Small Domains")
-        plt.show()
-
-        plt.plot(self.updated.t_sync, self.updated.u_drift)
-        plt.xlabel("Time (ms)")
-        plt.ylabel("Displacement Drift (mm)")
-        plt.title("Displacement Drift between Large and Small Domains")
-        plt.show()
-
-        plt.plot(self.updated.t_sync, self.updated.v_drift)
-        plt.xlabel("Time (ms)")
-        plt.ylabel("Velocity Drift (mm/ms)")
-        plt.title("Velocity Drift between Large and Small Domains")
-        plt.show()
-
-def newCoupling():
+def newCoupling(vel_csv, stability_plots):
     # Utilise same element size, drive time step ratio with Co.
     nElemLarge = 300
     E_L = 0.02e9
@@ -219,11 +207,14 @@ def newCoupling():
     Length = 50e-3
     propTime = 1.75 * Length * np.sqrt(rho / E_L)    
     def vel(t): return vbc.velbcSquareWave(t, 2 * Length , E_L, rho)
-    accelBoundaryCondtions = abc(list(),list())
-    upd_largeDomain = SimpleIntegrator("total", E_L, rho, Length, 1, nElemLarge, propTime, vbc([0], [vel]), accelBoundaryCondtions, Co=Courant)
-    upd_smallDomain = SimpleIntegrator("total", E_s, rho, Length * 2, 1, nElemLarge * 2, propTime, None, accelBoundaryCondtions, Co=Courant)
-    upd_fullDomain = MultiTimeStep(upd_largeDomain, upd_smallDomain)
+    accelBCs_L = abc(list(),list())
+    accelBCs_s = abc(list(),list())
+    upd_largeDomain = SimpleIntegrator("total", E_L, rho, Length, 1, nElemLarge, propTime, vbc([0], [vel]), accelBCs_L, Co=Courant)
+    upd_smallDomain = SimpleIntegrator("total", E_s, rho, Length * 2, 1, nElemLarge * 2, propTime, None, accelBCs_s, Co=Courant)
+    stability = Stability()
+    upd_fullDomain = MultiTimeStep(upd_largeDomain, upd_smallDomain, stability)
     plotfullDomain = Visualise_MultiTimestep(upd_fullDomain)
+    
     # Solve Loop
     while(upd_fullDomain.large.t <= 0.0016):
         upd_fullDomain.integrate()
@@ -235,36 +226,26 @@ def newCoupling():
             plotfullDomain.plot_stress()
 
         # Export to CSV
-        if (upd_fullDomain.large.t > 0.000149 and upd_fullDomain.large.t < 0.00150):
-            prev_pos_L = upd_fullDomain.large.position
-            prev_pos_S = upd_fullDomain.small.position
-            prev_vel_L = upd_fullDomain.large.v
-            prev_vel_S = upd_fullDomain.small.v
-            prev_t_L = upd_fullDomain.large.t
-            prev_t_S = upd_fullDomain.small.t
-        elif (upd_fullDomain.large.t > 0.00150 and upd_fullDomain.large.t < 0.001502):
-            # Find Vel values at Full Time Step with mean
-            vel_L = (prev_vel_L + upd_fullDomain.large.v) / 2
-            vel_S = (prev_vel_S + upd_fullDomain.small.v) / 2
-            writeCSV('Square_New_v_L2_wBulk.csv', upd_fullDomain.large.position, vel_L, 'pos_L', 'vel_L' )
-            writeCSV('Square_New_v_S2_wBulk.csv', upd_fullDomain.small.position + upd_fullDomain.large.L, vel_S, 'pos_S', 'vel_S')
-            print("CSV Time: ", (upd_fullDomain.large.t + prev_t_L) / 2)
+        if (vel_csv):
+            vHalftoCSV(upd_fullDomain.large.t, upd_fullDomain.large.v, upd_fullDomain.small.v,
+                   upd_fullDomain.large.t_prev, upd_fullDomain.large.v_prev, upd_fullDomain.small.v_prev, 
+                   upd_fullDomain.large.position, upd_fullDomain.small.position, upd_fullDomain.large.L)
 
     plotfullDomain.create_gif('Updated_Multi-time-step_accel.gif', plotfullDomain.filenames_accel)
     plotfullDomain.create_gif('Updated_Multi-time-step.gif', plotfullDomain.filenames_vel)
     plotfullDomain.create_gif('Updated_Multi-time-step_disp.gif', plotfullDomain.filenames_disp)
     plotfullDomain.create_gif('Updated_Multi-time-step_stress.gif', plotfullDomain.filenames_stress)
 
-    plotfullDomain.plot_time_steps()
-    plotfullDomain.plot_drift()
-    plt.plot(upd_fullDomain.t_sync, upd_fullDomain.W_GammaL)
-    plt.plot(upd_fullDomain.t_sync, upd_fullDomain.W_GammaS)
-    plt.xlabel("Time (ms)")
-    plt.ylabel("Energy Interface")
-    plt.title("Energy (J)")
-    plt.show()
+    if (stability_plots):
+        
+        stability.plot_drift()
+        stability.plot_Work()
+        stability.plot_CouplingForce()
+        stability.plot_CouplingForceDiff()
+        stability.plot_KE()
 
     # Print Minimum Time Step for Whole Domain
+    plotfullDomain.plot_time_steps()
     print("Minimum Time Step for Large Domain: ", upd_fullDomain.min_dt)
     # Print Total Number of Integration Steps on Large 
     print("Number of Integration Steps: ", upd_fullDomain.el_steps)
@@ -272,8 +253,7 @@ def newCoupling():
     print("Time Steps: ", upd_fullDomain.steps_L[:10])
     print("Time Steps: ", upd_fullDomain.steps_S[:10])
 
-
 if __name__ == "__main__":
-    newCoupling()
+    newCoupling(True, True) # Export CSV, Stability Plots
 
     

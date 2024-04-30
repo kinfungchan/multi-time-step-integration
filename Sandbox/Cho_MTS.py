@@ -74,6 +74,15 @@ class Multistep:
         self.v_f = np.zeros(1)
         self.u_f = np.zeros(1)
 
+        # List of Time Histories
+        self.steps_2El = np.array([0.0])
+        self.steps_L = np.array([0.0])
+        self.steps_S = np.array([0.0])
+
+        # Minimum Time Step 
+        self.min_dt = np.inf
+        self.el_steps = 0
+
     def Cho_multistep(self):
         """
         Integrate the Domain using the CDM Scheme
@@ -130,6 +139,9 @@ class Multistep:
             self.Small.a = a_njS_S
             self.Small.t = self.Small.t + self.Small.dt
             self.Small.n += 1
+            self.el_steps += self.Small.n_elems + 2 # +two layer elements of L-domain adjacent to interface
+            self.steps_2El = np.append(self.steps_2El, self.Small.dt)
+            self.steps_S = np.append(self.steps_S, self.Small.dt)
 
             # Update Frame
             self.a_f = a_njS_f
@@ -172,6 +184,11 @@ class Multistep:
 
         self.Large.t = self.Large.t + self.Large.dt
         self.Large.n += 1
+        self.el_steps += self.Large.n_elems
+        self.steps_L = np.append(self.steps_L, self.Large.dt)
+
+        # Update Minimum Time Step
+        self.min_dt = min(self.min_dt, self.Small.dt, self.Large.dt)
 
 def ChoCoupling():
     # Initialise Domains
@@ -205,23 +222,31 @@ def ChoCoupling():
     bar = Visualise_MTS(full_Domain)
 
     # Integrate over time
-    while Domain_L.t < 0.0015:
+    while Domain_L.t < 0.0016:
         full_Domain.Cho_multistep()
         print("Time: ", Domain_L.t)
-        if Domain_L.n % 10 == 0: 
+        if Domain_L.n % 500 == 0: 
             bar.plot_accel()
             bar.plot_vel()
             bar.plot_disp()
             bar.plot_stress()
 
-        if Domain_L.n % 600 == 0:
-            exportCSV(Domain_L, Domain_S)
+        if Domain_L.n % 900 == 0:
+            exportCSV('Square_Cho_v_L2.csv', 'Square_Cho_v_S2.csv', Domain_L, Domain_S)
 
     bar.create_gif('FEM1DAccel.gif', bar.filenames_accel)
     bar.create_gif('FEM1DVel.gif', bar.filenames_vel)
     bar.create_gif('FEM1DDisp.gif', bar.filenames_disp)
     bar.create_gif('FEM1DStress.gif', bar.filenames_stress)
 
+    # Print Minimum Time Step for Whole Domain
+    print("Minimum Time Step for Whole Domain: ", full_Domain.min_dt)
+    # Print Total Number of Integration Steps 
+    print("Number of Integration Steps: ", full_Domain.el_steps)
+    # Print First 10 Time Steps on Large and Small
+    print("Time Steps: ", full_Domain.steps_L[:10])
+    print("Time Steps: ", full_Domain.steps_2El[:10])
+    print("Time Steps: ", full_Domain.steps_S[:10])
 
 if __name__ == '__main__':
     ChoCoupling()

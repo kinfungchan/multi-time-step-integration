@@ -87,6 +87,10 @@ class Multistep:
         self.steps_L = np.array([0.0])
         self.steps_S = np.array([0.0])
 
+        # Minimum Time Step
+        self.min_dt = np.inf
+        self.el_steps = 0
+
     def solve_subframes(self):
         self.dt_f = min(self.t_s_new - self.t_f, self.t_L_new - self.t_f) # 2.2 
 
@@ -150,6 +154,7 @@ class Multistep:
         self.t_f = self.t_f + self.dt_f
         self.n_f += 1
         self.steps_f = np.append(self.steps_f, self.dt_f)
+        self.el_steps += 5 # 2 elements of S and L and 1 frame element
 
     def solve_subdomains(self, Domain: Domain, Lambda_n1r, invM_r, B_r):
         Domain.element_update()
@@ -194,6 +199,7 @@ class Multistep:
 
         Domain.t = Domain.t + Domain.dt
         Domain.n += 1
+        self.el_steps += Domain.n_elems
         if (Domain.label == 'Large'):
             self.steps_L = np.append(self.steps_L, Domain.dt)
         else:
@@ -213,6 +219,8 @@ class Multistep:
             self.solve_subdomains(self.Small, self.Lambda_n1r_S, self.invM_S, self.B_S)
             self.t_s_act = self.Small.t 
             self.t_s_new = self.t_s_act + self.Small.dt 
+
+            self.min_dt = min(self.min_dt, self.dt_f, self.Small.dt)
         
         # Solution of Solvable Subframes
         self.solve_subframes()
@@ -221,6 +229,8 @@ class Multistep:
         self.solve_subdomains(self.Large, self.Lambda_n1r_L, self.invM_L, self.B_L)
         self.t_L_act = self.Large.t 
         self.t_L_new = self.t_L_act + self.Large.dt
+
+        self.min_dt = min(self.min_dt, self.dt_f, self.Large.dt)
        
     def plot_time_steps(self):
         x = ['Frame', 'RegionL', 'L', 'RegionS', 'S']
@@ -272,17 +282,17 @@ def DvorakCoupling():
     bar = Visualise_MTS(full_Domain)
 
     # Integrate over time
-    while Domain_L.t < 0.0015:
+    while Domain_L.t < 0.0016:
         full_Domain.Dvorak_multistep()
         print("Time: ", Domain_L.t)
-        if Domain_L.n % 10 == 0: 
+        if Domain_L.n % 500 == 0: 
             bar.plot_accel()
             bar.plot_vel()
             bar.plot_disp()
             bar.plot_stress()
 
-        if Domain_L.n % 600 == 0:
-            exportCSV(Domain_L, Domain_S)
+        if Domain_L.n % 900 == 0:
+            exportCSV('Square_Dvorak_v_L2.csv', 'Square_Dvorak_v_S2.csv', Domain_L, Domain_S)
             print("CSV Time: ", Domain_L.t)
             # bar.plot_interface_accel()
             # bar.plot_interface_vel()
@@ -299,6 +309,16 @@ def DvorakCoupling():
 
     # Plot Time Histories
     full_Domain.plot_time_steps()
+    # Print Minimum Time Step for Whole Domain
+    print("Minimum Time Step for Whole Domain: ", full_Domain.min_dt)
+    # Print Total Number of Integration Steps
+    print("Number of Integration Steps: ", full_Domain.el_steps)
+    # Print First 10 Time Steps on Large and Small
+    print("Time Steps: ", full_Domain.steps_f[:10])
+    print("Time Steps: ", full_Domain.steps_r_L[:10])
+    print("Time Steps: ", full_Domain.steps_L[:10])
+    print("Time Steps: ", full_Domain.steps_r_S[:10])
+    print("Time Steps: ", full_Domain.steps_S[:10])
 
 if __name__ == '__main__':
     DvorakCoupling()
