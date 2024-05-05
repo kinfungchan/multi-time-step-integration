@@ -83,6 +83,16 @@ class SimpleIntegrator:
         self.u_prev = np.zeros(self.n_nodes)
         self.f_int_prev = np.zeros(self.n_nodes)
         self.t_prev = 0
+        self.v_fulldt = np.zeros(self.n_nodes)
+
+    def apply_bulk_viscosity(self, v, dx, rho, E, stress):
+        D = (np.diff(v) / dx) # Deformation Gradient            
+        c = np.sqrt(E / rho) # Speed of sound
+        C1 = 0.06 # Bulk Viscosity Linear Coefficient
+        BV_lin = C1 * c * D
+        bulk_viscosity_stress =  rho * dx * (-BV_lin)
+        # Include bulk viscosity term in stress update
+        stress -= bulk_viscosity_stress  # Add bulk viscosity term
 
 
     def assemble_internal(self):
@@ -95,15 +105,7 @@ class SimpleIntegrator:
             self.stress = self.strain * self.E
 
             # Bulk Viscosity
-            D = (np.diff(self.v) / tempdx) # Deformation Gradient            
-            c = np.sqrt(self.E / self.rho) # Speed of sound
-            C0 = 0.0 # Bulk Viscosity Quadratic Coefficient
-            C1 = 0.06 # Bulk Viscosity Linear Coefficient
-            BV_quad = C0 * self.dx * D**2
-            BV_lin = C1 * c * D
-            self.bulk_viscosity_stress =  self.rho * tempdx * (BV_quad - BV_lin)
-            # Include bulk viscosity term in stress update
-            self.stress -= self.bulk_viscosity_stress  # Add bulk viscosity term
+            self.apply_bulk_viscosity(self.v, tempdx, self.rho, self.E, self.stress)
 
             self.f_int[1:-1] = -np.diff(self.stress)
             self.f_int[0] += -self.stress[0]
@@ -114,15 +116,7 @@ class SimpleIntegrator:
             self.stress = self.strain * self.E
 
             # Bulk Viscosity
-            D = (np.diff(self.v) / self.dx) # Deformation Gradient            
-            c = np.sqrt(self.E / min(self.rho)) # Speed of sound
-            C0 = 0.0 # Bulk Viscosity Quadratic Coefficient
-            C1 = 0.06 # Bulk Viscosity Linear Coefficient
-            BV_quad = C0 * self.dx * D**2
-            BV_lin = C1 * c * D
-            self.bulk_viscosity_stress =  min(self.rho) * self.dx * (BV_quad - BV_lin)
-            # Include bulk viscosity term in stress update
-            self.stress -= self.bulk_viscosity_stress  # Add bulk viscosity term
+            self.apply_bulk_viscosity(self.v, self.dx, min(self.rho), self.E, self.stress)
 
             self.f_int[1:-1] = -np.diff(self.stress)
             self.f_int[0] += -self.stress[0]
@@ -149,8 +143,10 @@ class SimpleIntegrator:
         self.assemble_abcs() 
         if self.n == 0:
             self.v += 0.5 * self.a * self.dt
+            self.v_fulldt = self.v + 0.5 * self.a * self.dt
         else:
             self.v += self.a * self.dt
+            self.v_fulldt = self.v + 0.5 * self.a * self.dt
         self.assemble_vbcs(self.t + 0.5 * self.dt)
         self.u += self.v * self.dt
         if (self.formulation == "updated"):
