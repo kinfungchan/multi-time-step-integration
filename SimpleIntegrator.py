@@ -84,6 +84,7 @@ class SimpleIntegrator:
         self.f_int_prev = np.zeros(self.n_nodes)
         self.t_prev = 0
         self.v_fulldt = np.zeros(self.n_nodes)
+        self.a_tilda = np.zeros(self.n_nodes)
 
     def apply_bulk_viscosity(self, v, dx, rho, E, stress):
         D = (np.diff(v) / dx) # Deformation Gradient            
@@ -140,6 +141,7 @@ class SimpleIntegrator:
     def single_tstep_integrate(self):
         self.save_prev()
         self.a = -self.f_int / self.mass
+        self.a_tilda = np.copy(self.a)
         self.assemble_abcs() 
         if self.n == 0:
             self.v += 0.5 * self.a * self.dt

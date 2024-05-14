@@ -154,7 +154,7 @@ class Multistep:
         self.t_f = self.t_f + self.dt_f
         self.n_f += 1
         self.steps_f = np.append(self.steps_f, self.dt_f)
-        self.el_steps += 5 # 2 elements of S and L and 1 frame element
+        self.el_steps += 4 # 2 elements of S and L Domain
 
     def solve_subdomains(self, Domain: Domain, Lambda_n1r, invM_r, B_r):
         Domain.element_update()

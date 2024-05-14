@@ -11,7 +11,7 @@ import os
 """
 This module implements the subcycling algorithm with interface constant acceleration from:
 
-K.F. Chan, N. Bombace, D. Sap, D. Wason, and N. Petrinic (2023),
+K.F. Chan, N. Bombace, D. Sap, D. Wason, and N. Petrinic (2024),
 A Multi-Time Stepping Algorithm for the Modelling of Heterogeneous Structures with Explicit Time Integration, 
 I.J. Num. Meth. in Eng., 2023;00:1–6.
 
@@ -78,10 +78,39 @@ class MultiTimeStep:
             self.f_int_Gamma = self.large.f_int[-1] + self.small.f_int[0]
             self.calc_timestep_ratios()
 
+        # Integrate over Small Time Steps
+        tempu = np.copy(self.large.u)
+        tempv = np.copy(self.large.v) # We have continuity without full v (Full V overestimates)
+        tempa = np.copy(self.large.a)
+        tempa[-1] = self.accelCoupling()
+        k = 0
+
         while (self.nextTimeStepRatio <= 1 or (self.currTimeStepRatio <= 1 and self.nextTimeStepRatio <= 1.000001)):
             # Integrate Small Domain
             self.update_small_domain()
+            k+=1
+
+            self.stability.a_tilda = np.append(self.stability.a_tilda, self.small.a_tilda[0])
+            self.stability.a_const = np.append(self.stability.a_const, self.accelCoupling())
             self.stability.t_small = np.append(self.stability.t_small, self.small.t)
+            recovered_f_int = self.stability.fint_Equiv(self.large.mass[-1], self.small.mass[0],
+                                      self.small.f_int[0], self.accelCoupling())  
+            
+            # Integrate Large Domain over Small Time Step
+            # tempu = tempu + tempv * self.small.dt + tempa * self.small.dt**2 # N.B
+            tempv = tempv + tempa * self.small.dt
+            tempu = tempu + tempv * self.small.dt
+            tempstrain = np.diff(tempu) / self.large.dx
+            tempstress = tempstrain * self.large.E
+            self.large.apply_bulk_viscosity(tempv, self.large.dx, min(self.large.rho), self.large.E, tempstress)
+            tempf_int = np.zeros(len(tempu))
+            tempf_int[1:-1] = -np.diff(tempstress)
+            tempf_int[0] += -tempstress[0]
+            tempf_int[-1] += tempstress[-1]
+            self.stability.f_int_L_int = np.append(self.stability.f_int_L_int, tempf_int[-1]) 
+            self.stability.f_int_L_rec = np.append(self.stability.f_int_L_rec, recovered_f_int)
+            self.stability.u_L_int = np.append(self.stability.u_L_int, tempu[-1]) 
+            self.stability.u_s = np.append(self.stability.u_s, self.small.u[0])
 
         # Compute Pullback Values
         self.alpha_L = 1 - ((self.large_tTrial - self.small.t)/(self.large_tTrial - self.large.t))
@@ -92,6 +121,7 @@ class MultiTimeStep:
         elif (self.alpha_s > self.alpha_L):
             self.small.dt = self.alpha_s * self.small.dt
             self.update_small_domain()
+            k+=1
             
         # Integrate Large Domain
         self.large.a_bc.indexes.append(-1)
@@ -100,8 +130,9 @@ class MultiTimeStep:
 
         # Enforce continuity
         self.large.u[-1] = self.small.u[0]
-        self.large.v[-1] = self.small.v[0]
+        # self.large.v[-1] = self.small.v[0]
 
+        # Comparison for other MTS Methods
         self.min_dt = min(self.min_dt, self.small.dt, self.large.dt)
         self.steps_L = np.append(self.steps_L, self.large.dt)
         self.el_steps += self.large.n_elem
@@ -113,15 +144,16 @@ class MultiTimeStep:
 
         self.f_int_Gamma = self.large.f_int[-1] + self.small.f_int[0]  
 
-        lm_L, lm_s, a_diff = self.stability.LagrangeMultiplierEquiv(self.large.mass[-1], self.small.mass[0], 
-                                                                    self.large.f_int[-1], self.small.f_int[0],
-                                                                    -self.f_int_Gamma / self.mass_Gamma)       
-        self.stability.lm_L = np.append(self.stability.lm_L, lm_L)
-        self.stability.lm_s = np.append(self.stability.lm_s, lm_s)
-        self.stability.a_diff = np.append(self.stability.a_diff, a_diff)
-        self.stability.calc_Work(lm_L, lm_s, self.large.u[-1], self.small.u[0])
-    
-class Visualise_MultiTimestep:
+        # Stability Calculations over Large Time Step
+        lm_L, lm_s, a_f = self.stability.LagrangeMultiplierEquiv(self.large.mass[-1], self.small.mass[0], 
+                                                                 self.large.f_int[-1], self.small.f_int[0],
+                                                                 (-self.f_int_Gamma / self.mass_Gamma))    
+        self.stability.a_diff = np.append(self.stability.a_diff, (np.sqrt((a_f - (-self.f_int_Gamma / self.mass_Gamma))) ** 2))
+
+        self.stability.calc_W_Gamma_s(self.small.mass[0], a_f, self.small.f_int[0], self.small.u[0])
+        self.stability.calc_W_Gamma_L(self.large.mass[-1], a_f, self.large.f_int[-1], self.large.u[-1])
+
+class Visualise_MultiTimestep: # We can use Visualise.py instead now
 
     def __init__(self, upd_fullDomain: MultiTimeStep):
 
@@ -183,12 +215,9 @@ class Visualise_MultiTimestep:
 def newCoupling(vel_csv, stability_plots):
     # Utilise same element size, drive time step ratio with Co.
     nElemLarge = 300
-    E_L = 0.02e9
-    # E_s = 0.18e9    
+    E_L = 0.02e9 
     rho = 8000
     E_s = (np.pi/0.02)**2 * rho # Non Integer Time Step Ratio = pi
-    # c = sp.c * 1e-8
-    # E_s = (c/0.02)**2 * rho # Non Integer Time Step Ratio Speed of Light 
     Courant = 0.5
     Length = 50e-3
     propTime = 1.75 * Length * np.sqrt(rho / E_L)    
@@ -205,7 +234,7 @@ def newCoupling(vel_csv, stability_plots):
     while(upd_fullDomain.large.t <= 0.0016):
         upd_fullDomain.integrate()
         print("Time: ", upd_fullDomain.large.t)
-        if (upd_fullDomain.large.n % 500 == 0):
+        if (upd_fullDomain.large.n % 500 == 0): # Adjust Number for output plots (Set High for Debugging)
             plotfullDomain.plot_accel()
             plotfullDomain.plot_vel()
             plotfullDomain.plot_disp()
@@ -223,10 +252,18 @@ def newCoupling(vel_csv, stability_plots):
     plotfullDomain.create_gif('Updated_Multi-time-step_stress.gif', plotfullDomain.filenames_stress)
 
     if (stability_plots):
-        stability.plot_LMEquiv()
+        # Over Large Time Steps
+        stability.plot_LMEquiv(csv=False)
+        stability.plot_W_Gamma_dtL() # Forces on Interface * Displacement (Large + Small)
+        stability.plot_KE() # Kinetic Energy over large Time Step
+        
+        # Over Small Time Steps        
+        stability.plot_a_small()        
+        stability.plot_fintEquiv()
+        stability.plot_u_Equiv()
+
+        # Drifting Conditions
         stability.plot_drift()
-        stability.plot_Work()
-        stability.plot_KE()
 
     # Print Minimum Time Step for Whole Domain
     plotfullDomain.plot_time_steps()
@@ -238,6 +275,6 @@ def newCoupling(vel_csv, stability_plots):
     print("Time Steps: ", upd_fullDomain.steps_S[:10])
 
 if __name__ == "__main__":
-    newCoupling(True, True) # Export CSV, Stability Plots
+    newCoupling(False, True) # Export CSV, Stability Plots
 
     
