@@ -3,6 +3,7 @@ from BoundaryConditions import VelBoundaryConditions as vbc
 from BoundaryConditions import AccelBoundaryConditions as abc
 from Stability import Stability
 from Sandbox import exportCSV, writeCSV, vHalftoCSV
+from Visualise import Plot, Animation
 import numpy as np
 import matplotlib.pyplot as plt
 import imageio 
@@ -153,65 +154,6 @@ class MultiTimeStep:
         self.stability.calc_W_Gamma_s(self.small.mass[0], a_f, self.small.f_int[0], self.small.u[0])
         self.stability.calc_W_Gamma_L(self.large.mass[-1], a_f, self.large.f_int[-1], self.large.u[-1])
 
-class Visualise_MultiTimestep: # We can use Visualise.py instead now
-
-    def __init__(self, upd_fullDomain: MultiTimeStep):
-
-        self.updated = upd_fullDomain
-        self.filenames_accel = []
-        self.filenames_vel = []
-        self.filenames_disp = []
-        self.filenames_stress = []
-
-    def plot(self, variable_L, variable_S, position_L, position_S, title, xlabel, ylabel, filenames):
-        filenames.append(f'FEM1D_{title}{self.updated.large.n}.png')
-        plt.style.use('ggplot')
-        plt.plot(position_L, variable_L)
-        plt.plot([position + self.updated.large.L for position in position_S], variable_S) 
-        plt.title(title,fontsize=12)
-        plt.xlabel(xlabel)
-        plt.ylabel(ylabel)
-        plt.legend(["Time: " + format(self.updated.large.t * 1e6, ".1f") + "us"])
-        plt.savefig(f'FEM1D_{title}{self.updated.large.n}.png')
-        plt.close()
-
-    def plot_accel(self):
-        self.plot(self.updated.large.a, self.updated.small.a, self.updated.large.position, self.updated.small.position, "Acceleration", "Domain Position (m)", "Acceleration (m/s^2)", self.filenames_accel)
-
-    def plot_vel(self):
-        self.plot(self.updated.large.v, self.updated.small.v, self.updated.large.position, self.updated.small.position,  "Velocity", "Domain Position (m)", "Velocity (m/s)", self.filenames_vel)
-
-    def plot_disp(self):
-        self.plot(self.updated.large.u, self.updated.small.u, self.updated.large.position, self.updated.small.position, "Displacement", "Domain Position (m)", "Displacement (m)", self.filenames_disp)
-
-    def plot_stress(self):
-        self.plot(self.updated.large.stress, self.updated.small.stress, self.updated.large.midposition, self.updated.small.midposition, "Stress", "Domain Position (m)", "Stress (Pa)", self.filenames_stress)
-
-    def create_gif(self, gif_name, filenames):
-        with imageio.get_writer(gif_name, mode='I') as writer:
-            for filename in filenames:
-                image = imageio.imread(filename)
-                writer.append_data(image)
-        for filename in set(filenames):
-            os.remove(filename)
-
-    def plot_time_steps(self):
-        x = ['L', 'S']
-        n_steps = 10 # Number of Steps to Plot
-        data = np.empty((n_steps, 2))
-        for i in range(n_steps):
-            data[i] = np.array([self.updated.steps_L[i], 
-                                self.updated.steps_S[i]])
-            
-        plt.figure(figsize=(10, 6))
-        for i in range(1, n_steps):        
-            plt.bar(x, data[i], bottom=np.sum(data[:i], axis=0), color=plt.cm.tab10(i), label=f'Local Step {i}')
-
-        plt.ylabel('Time (s)')
-        plt.title('Time Steps taken for New Multi-step')
-        plt.legend()
-        plt.show()
-
 def newCoupling(vel_csv, stability_plots):
     # Utilise same element size, drive time step ratio with Co.
     nElemLarge = 300
@@ -228,17 +170,35 @@ def newCoupling(vel_csv, stability_plots):
     upd_smallDomain = SimpleIntegrator("total", E_s, rho, Length * 2, 1, nElemLarge * 2, propTime, None, accelBCs_s, Co=Courant)
     stability = Stability()
     upd_fullDomain = MultiTimeStep(upd_largeDomain, upd_smallDomain, stability)
-    plotfullDomain = Visualise_MultiTimestep(upd_fullDomain)
+    # Visualisation Classes
+    plot = Plot()
+    animate = Animation(plot)
     
     # Solve Loop
     while(upd_fullDomain.large.t <= 0.0016):
         upd_fullDomain.integrate()
         print("Time: ", upd_fullDomain.large.t)
         if (upd_fullDomain.large.n % 500 == 0): # Adjust Number for output plots (Set High for Debugging)
-            plotfullDomain.plot_accel()
-            plotfullDomain.plot_vel()
-            plotfullDomain.plot_disp()
-            plotfullDomain.plot_stress()
+            animate.save_single_plot(2, [upd_fullDomain.large.position, [position + upd_fullDomain.large.L for position in upd_fullDomain.small.position]],
+                                     [upd_fullDomain.large.a, upd_fullDomain.small.a],
+                                     "Acceleration", "Domain Position (m)", "Acceleration (m/s^2)",
+                                     animate.filenames_accel, upd_fullDomain.large.n,
+                                     ["Large", "Small"])
+            animate.save_single_plot(2, [upd_fullDomain.large.position, [position + upd_fullDomain.large.L for position in upd_fullDomain.small.position]],
+                                     [upd_fullDomain.large.v, upd_fullDomain.small.v],
+                                     "Velocity", "Domain Position (m)", "Velocity (m/s)",
+                                     animate.filenames_vel, upd_fullDomain.large.n,
+                                     ["Large", "Small"])
+            animate.save_single_plot(2, [upd_fullDomain.large.position, [position + upd_fullDomain.large.L for position in upd_fullDomain.small.position]],
+                                     [upd_fullDomain.large.u, upd_fullDomain.small.u],
+                                     "Displacement", "Domain Position (m)", "Displacement (m)",
+                                     animate.filenames_disp, upd_fullDomain.large.n,
+                                     ["Large", "Small"])
+            animate.save_single_plot(2, [upd_fullDomain.large.midposition, [position + upd_fullDomain.large.L for position in upd_fullDomain.small.midposition]],
+                                     [upd_fullDomain.large.stress, upd_fullDomain.small.stress],
+                                     "Stress", "Domain Position (m)", "Stress (Pa)",
+                                     animate.filenames_stress, upd_fullDomain.large.n,
+                                     ["Large", "Small"])
 
         # Export to CSV
         if (vel_csv):
@@ -246,11 +206,8 @@ def newCoupling(vel_csv, stability_plots):
                    upd_fullDomain.large.t_prev, upd_fullDomain.large.v_prev, upd_fullDomain.small.v_prev, 
                    upd_fullDomain.large.position, upd_fullDomain.small.position, upd_fullDomain.large.L)
 
-    plotfullDomain.create_gif('Updated_Multi-time-step_accel.gif', plotfullDomain.filenames_accel)
-    plotfullDomain.create_gif('Updated_Multi-time-step.gif', plotfullDomain.filenames_vel)
-    plotfullDomain.create_gif('Updated_Multi-time-step_disp.gif', plotfullDomain.filenames_disp)
-    plotfullDomain.create_gif('Updated_Multi-time-step_stress.gif', plotfullDomain.filenames_stress)
-
+    # Simulation Ended - Post-Processing
+    animate.save_gifs()
     if (stability_plots):
         # Over Large Time Steps
         stability.plot_LMEquiv(csv=False)
@@ -265,8 +222,8 @@ def newCoupling(vel_csv, stability_plots):
         # Drifting Conditions
         stability.plot_drift()
 
-    # Print Minimum Time Step for Whole Domain
-    plotfullDomain.plot_time_steps()
+    plot.plot_dt_bars(upd_fullDomain.steps_L, upd_fullDomain.steps_S, True)
+
     print("Minimum Time Step for Large Domain: ", upd_fullDomain.min_dt)
     # Print Total Number of Integration Steps on Large 
     print("Number of Integration Steps: ", upd_fullDomain.el_steps)

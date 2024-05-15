@@ -10,12 +10,10 @@ In this notebook we look to reimplement the Monolithic time integration for
 two-dimensional heterogeneous solids from the following paper
 
 
-Reference: Cho, S. S., Kolman, R., González, J. A., & Park, K. C. (2019).
-Explicit multistep time integration for discontinuous elastic stress wave
-propagation in heterogeneous solids. International Journal for Numerical
-Methods in Engineering, 118(5), 276-302
-
-This script attends to the Numerical Example in Section 4.1 of the paper
+Reference: Park, K. C., Lim, S. J., & Huh, H. (2012). A method for computation of
+discontinuous wave propagation in heterogeneous solids: basic algorithm description
+and application to one‐dimensional problems. International Journal for Numerical
+Methods in Engineering, 91(6), 622-643.
 
 """
 

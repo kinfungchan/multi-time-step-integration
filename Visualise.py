@@ -1,3 +1,4 @@
+import numpy as np
 import matplotlib.pyplot as plt
 import imageio 
 import os
@@ -17,6 +18,24 @@ class Plot:
         plt.xlim(xlim[0], xlim[1])
         plt.ylim(ylim[0], ylim[1])
         plt.legend(legend)
+        if show:
+            plt.show()
+
+    def plot_dt_bars(self, steps_L, steps_S, show):
+        x = ['L', 'S']
+        n_steps = 10 # Number of Steps to Plot
+        data = np.empty((n_steps, 2))
+        for i in range(n_steps):
+            data[i] = np.array([steps_L[i], 
+                                steps_S[i]])
+            
+        plt.figure(figsize=(10, 6))
+        for i in range(1, n_steps):        
+            plt.bar(x, data[i], bottom=np.sum(data[:i], axis=0), color=plt.cm.tab10(i), label=f'Local Step {i}')
+
+        plt.ylabel('Time (s)')
+        plt.title('Time Steps taken for New Multi-step')
+        plt.legend()
         if show:
             plt.show()
 
