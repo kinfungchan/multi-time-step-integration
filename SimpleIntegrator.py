@@ -114,7 +114,7 @@ class SimpleIntegrator:
             self.stress = self.strain * self.E
 
             # Bulk Viscosity
-            self.apply_bulk_viscosity(self.v, self.dx, min(self.rho), self.E, self.stress)
+            # self.apply_bulk_viscosity(self.v, self.dx, min(self.rho), self.E, self.stress)
 
             self.f_int[1:-1] = -np.diff(self.stress)
             self.f_int[0] += -self.stress[0]

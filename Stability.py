@@ -1,11 +1,17 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from Sandbox import exportCSV, writeCSV
+from Energy import SubdomainEnergy
 from Visualise import Plot
 
 class Stability:
 
-    def __init__(self):
+    def __init__(self, energy_L: SubdomainEnergy, energy_s: SubdomainEnergy):
+        self.P = Plot()
+
+        # Energy Balance for Large and Small Domains
+        self.energy_L = energy_L
+        self.energy_s = energy_s
 
         # Lagrange Multiplier Equivalence at Large Time Steps
         self.lm_L = np.array([0.0])
@@ -23,8 +29,8 @@ class Stability:
         self.a_const = np.array([0.0]) # constrained acceleration
 
         # Kinetic Energy
-        self.KE_L = np.array([0.0])
-        self.KE_S = np.array([0.0])
+        self.KE_Gamma_L = np.array([0.0])
+        self.KE_Gamma_s = np.array([0.0])
         # Coupling Energy
         self.W_Gamma_L_dtL = np.array([0.0])
         self.W_Gamma_S_dtL = np.array([0.0])
@@ -36,6 +42,20 @@ class Stability:
         self.t_sync = np.array([0.0])
         self.t_small = np.array([0.0])
 
+    """
+    Energy Balance for Subdomains
+
+    """
+    def plot_EnergyBalance(self):
+        # Energy Balance
+        W = Plot()
+        W.plot(6, [self.t_small, self.t_sync, self.t_small, self.t_sync, self.t_small, self.t_sync], 
+                  [self.energy_s.KE, self.energy_L.KE, self.energy_s.IE, self.energy_L.IE, self.energy_s.EBAL, self.energy_L.EBAL],
+                  "Energy Balance for Large and Small Domains",
+                  "Time (s)", "Energy (J)",
+                  ["Large KE", "Small KE", "Large IE", "Small IE", "Large EBAL", "Small EBAL"], 
+                  [None, None], [None, None],
+                   True)
 
     """
     Stability over a Large Time Step
@@ -114,24 +134,25 @@ class Stability:
     def plot_W_Gamma_dtL(self):
         W_Gamma = Plot()
         W_Gamma.plot(1, [self.t_sync], [self.W_Gamma_L_dtL + self.W_Gamma_S_dtL],
-                    "Coupling Energy for Large and Small Domains over Large Time Steps",
+                    "Coupling Energy for Large + Small Domains over Large Time Steps",
                     "Time (s)", "Coupling Energy (J)",
                     ["Large + Small"], 
                     [None, None], [None, None],
                     True)
         
-    def calc_KE(self, mass_L, v_L, mass_S, v_S):
-        self.KE_S = np.append(self.KE_S, 0.5 * mass_S * v_S**2)
-        self.KE_L = np.append(self.KE_L, 0.5 * mass_L * v_L**2)
+    def calc_KE_Gamma(self, mass_L, v_L, mass_S, v_S):
+        self.KE_Gamma_s = np.append(self.KE_Gamma_s, 0.5 * mass_S * v_S**2)
+        self.KE_Gamma_L = np.append(self.KE_Gamma_L, 0.5 * mass_L * v_L**2)
 
-    def plot_KE(self):
-        plt.plot(self.t_sync, self.KE_L - self.KE_S)
-        # plt.plot(self.t_sync, self.KE_L)
-        # plt.plot(self.t_sync, self.KE_S)
-        plt.legend(["Large", "Small"])
+    def plot_KE_Gamma(self):
+        plt.plot(self.t_sync, self.KE_Gamma_L - self.KE_Gamma_s)
+        # plt.plot(self.t_sync, self.KE_Gamma_L)
+        # plt.plot(self.t_sync, self.KE_Gamma_s)
+        # plt.legend([r"$\Gamma_L$", r"$\Gamma_s$"])
+        plt.ylim(-1e-15, 1e-15)
         plt.xlabel("Time (s)")
-        plt.ylabel("Kinetic Energy (J)")
-        plt.title("At Large Time Steps: Large KE and Small KE")
+        plt.ylabel("Difference in Kinetic Energy (J)")
+        plt.title("At Large Time Steps: Interface Large KE and Small KE")
         plt.show()    
 
     """
@@ -168,11 +189,11 @@ class Stability:
                 True)
     
     def plot_a_small(self):
-        # plt.plot(self.t_small, self.a_tilda)
-        # plt.plot(self.t_small, self.a_const)
-        # plt.legend(["Unconstrained", "Constrained"])
+        plt.plot(self.t_small, self.a_tilda)
+        plt.plot(self.t_small, self.a_const)
+        plt.legend(["Unconstrained", "Constrained"])
         plt.ylabel("Acceleration (m/s^2)")
-        plt.plot(self.t_small, self.a_tilda - self.a_const)
+        # plt.plot(self.t_small, self.a_tilda - self.a_const)
         plt.ylabel(r"$\mathregular{Acceleration\ \tilde{a} - a_{\Gamma}\ (m/s^2)}$")
         plt.xlabel("Time (s)")        
         plt.title("Acceleration for Interface Small Domain over Small Time Steps")
@@ -189,21 +210,23 @@ class Stability:
         self.v_drift =  np.append(self.v_drift, u_L - u_s)
         self.t_sync =  np.append(self.t_sync, t)
 
-    def plot_drift(self):
-        plt.plot(self.t_sync, self.a_drift)
-        plt.xlabel("Time (ms)")
-        plt.ylabel("Acceleration Drift (m/s^2)")
-        plt.title("Acceleration Drift between Large and Small Domains")
-        plt.show()
-
-        plt.plot(self.t_sync, self.u_drift)
-        plt.xlabel("Time (ms)")
-        plt.ylabel("Displacement Drift (mm)")
-        plt.title("Displacement Drift between Large and Small Domains")
-        plt.show()
-
-        plt.plot(self.t_sync, self.v_drift)
-        plt.xlabel("Time (ms)")
-        plt.ylabel("Velocity Drift (mm/ms)")
-        plt.title("Velocity Drift between Large and Small Domains")
-        plt.show()
+    def plot_drift(self, show):
+        self.P.plot(1, [self.t_sync], [self.a_drift],
+                    "Acceleration Drift between Large and Small Domains",
+                    "Time (s)", "Acceleration Drift (m/s^2)",
+                    ["Acceleration Drift"], 
+                    [None, None], [None, None],
+                    show)
+        self.P.plot(1, [self.t_sync], [self.v_drift],
+                    "Velocity Drift between Large and Small Domains",
+                    "Time (s)", "Velocity Drift (m/s)",
+                    ["Velocity Drift"], 
+                    [None, None], [None, None],
+                    show)
+        self.P.plot(1, [self.t_sync], [self.u_drift],
+                    "Displacement Drift between Large and Small Domains",
+                    "Time (s)", "Displacement Drift (m)",
+                    ["Displacement Drift"], 
+                    [None, None], [None, None],
+                    show)
+        

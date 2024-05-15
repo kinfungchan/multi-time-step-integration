@@ -2,6 +2,7 @@ from SimpleIntegrator import SimpleIntegrator
 from BoundaryConditions import VelBoundaryConditions as vbc
 from BoundaryConditions import AccelBoundaryConditions as abc
 from Stability import Stability
+from Energy import SubdomainEnergy
 from Sandbox import exportCSV, writeCSV, vHalftoCSV
 from Visualise import Plot, Animation
 import numpy as np
@@ -90,6 +91,8 @@ class MultiTimeStep:
             # Integrate Small Domain
             self.update_small_domain()
             k+=1
+            self.stability.energy_s.calc_energy_balance_subdomain(self.small.n_nodes, self.small.n_elem, self.small.mass, 
+                                                                  self.small.v, self.small.stress, self.small.E, self.small.dx)
 
             self.stability.a_tilda = np.append(self.stability.a_tilda, self.small.a_tilda[0])
             self.stability.a_const = np.append(self.stability.a_const, self.accelCoupling())
@@ -138,12 +141,15 @@ class MultiTimeStep:
         self.steps_L = np.append(self.steps_L, self.large.dt)
         self.el_steps += self.large.n_elem
         self.stability.calc_drift(self.large.a[-1], self.small.a[0], self.large.v[-1], self.small.v[0], self.large.u[-1], self.small.u[0], self.large.t)
-        self.stability.calc_KE(self.large.mass[-1], self.large.v[-1], self.small.mass[0], self.small.v[0])
+        self.stability.calc_KE_Gamma(self.large.mass[-1], self.large.v[-1], self.small.mass[0], self.small.v[0])
 
         self.large.assemble_internal()        
         self.calc_timestep_ratios()
 
         self.f_int_Gamma = self.large.f_int[-1] + self.small.f_int[0]  
+
+        self.stability.energy_L.calc_energy_balance_subdomain(self.large.n_nodes, self.large.n_elem, self.large.mass,
+                                                              self.large.v, self.large.stress, self.large.E, self.large.dx)
 
         # Stability Calculations over Large Time Step
         lm_L, lm_s, a_f = self.stability.LagrangeMultiplierEquiv(self.large.mass[-1], self.small.mass[0], 
@@ -167,9 +173,13 @@ def newCoupling(vel_csv, stability_plots):
     accelBCs_L = abc(list(),list())
     accelBCs_s = abc(list(),list())
     upd_largeDomain = SimpleIntegrator("total", E_L, rho, Length, 1, nElemLarge, propTime, vbc([0], [vel]), accelBCs_L, Co=Courant)
-    upd_smallDomain = SimpleIntegrator("total", E_s, rho, Length * 2, 1, nElemLarge * 2, propTime, None, accelBCs_s, Co=Courant)
-    stability = Stability()
+    upd_smallDomain = SimpleIntegrator("total", E_L, rho, Length * 2, 1, nElemLarge * 2, propTime, None, accelBCs_s, Co=Courant/np.pi)
+
+    energy_L = SubdomainEnergy()
+    energy_s = SubdomainEnergy()
+    stability = Stability(energy_L, energy_s)    
     upd_fullDomain = MultiTimeStep(upd_largeDomain, upd_smallDomain, stability)
+
     # Visualisation Classes
     plot = Plot()
     animate = Animation(plot)
@@ -209,10 +219,14 @@ def newCoupling(vel_csv, stability_plots):
     # Simulation Ended - Post-Processing
     animate.save_MTS_gifs()
     if (stability_plots):
+        ## Subdomain Stability
+        stability.plot_EnergyBalance()
+
+        ## Interface Stability
         # Over Large Time Steps
         stability.plot_LMEquiv(csv=False)
         stability.plot_W_Gamma_dtL() # Forces on Interface * Displacement (Large + Small)
-        stability.plot_KE() # Kinetic Energy over large Time Step
+        stability.plot_KE_Gamma() # Interface Kinetic Energy over large Time Step
         
         # Over Small Time Steps        
         stability.plot_a_small()        
@@ -220,9 +234,9 @@ def newCoupling(vel_csv, stability_plots):
         stability.plot_u_Equiv()
 
         # Drifting Conditions
-        stability.plot_drift()
+        stability.plot_drift(False)
 
-    plot.plot_dt_bars(upd_fullDomain.steps_L, upd_fullDomain.steps_S, True)
+    plot.plot_dt_bars(upd_fullDomain.steps_L, upd_fullDomain.steps_S, False)
 
     print("Minimum Time Step for Large Domain: ", upd_fullDomain.min_dt)
     # Print Total Number of Integration Steps on Large 
