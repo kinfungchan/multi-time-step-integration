@@ -99,6 +99,8 @@ class MultiTimeStep:
             self.stability.t_small = np.append(self.stability.t_small, self.small.t)
             recovered_f_int = self.stability.fint_Equiv(self.large.mass[-1], self.small.mass[0],
                                       self.small.f_int[0], self.accelCoupling())  
+            lm_L_dts, lm_s_dts, f_int_L_dts = self.stability.f_int_L_equiv(self.large.mass[-1], self.small.mass[0],
+                                                                           self.small.f_int[0], self.accelCoupling())
             
             # Integrate Large Domain over Small Time Step
             # tempu = tempu + tempv * self.small.dt + tempa * self.small.dt**2 # N.B
@@ -173,7 +175,7 @@ def newCoupling(vel_csv, stability_plots):
     accelBCs_L = abc(list(),list())
     accelBCs_s = abc(list(),list())
     upd_largeDomain = SimpleIntegrator("total", E_L, rho, Length, 1, nElemLarge, propTime, vbc([0], [vel]), accelBCs_L, Co=Courant)
-    upd_smallDomain = SimpleIntegrator("total", E_L, rho, Length * 2, 1, nElemLarge * 2, propTime, None, accelBCs_s, Co=Courant/np.pi)
+    upd_smallDomain = SimpleIntegrator("total", E_s, rho, Length * 2, 1, nElemLarge * 2, propTime, None, accelBCs_s, Co=Courant)
 
     energy_L = SubdomainEnergy()
     energy_s = SubdomainEnergy()
@@ -220,18 +222,19 @@ def newCoupling(vel_csv, stability_plots):
     animate.save_MTS_gifs()
     if (stability_plots):
         ## Subdomain Stability
-        stability.plot_EnergyBalance()
+        stability.plot_EnergyBalance(True)
 
         ## Interface Stability
         # Over Large Time Steps
         stability.plot_LMEquiv(csv=False)
-        stability.plot_W_Gamma_dtL() # Forces on Interface * Displacement (Large + Small)
+        stability.plot_W_Gamma_dtL(True) # Forces on Interface * Displacement (Large + Small)
         stability.plot_KE_Gamma() # Interface Kinetic Energy over large Time Step
         
         # Over Small Time Steps        
         stability.plot_a_small()        
         stability.plot_fintEquiv()
         stability.plot_u_Equiv()
+        stability.plot_lm_dts()
 
         # Drifting Conditions
         stability.plot_drift(False)
