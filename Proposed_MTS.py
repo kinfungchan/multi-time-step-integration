@@ -9,7 +9,7 @@ This module implements the subcycling algorithm with interface constant accelera
 
 K.F. Chan, N. Bombace, D. Sap, D. Wason, and N. Petrinic (2024),
 A Multi-Time Stepping Algorithm for the Modelling of Heterogeneous Structures with Explicit Time Integration, 
-I.J. Num. Meth. in Eng., 2023;00:1–6.
+I.J. Num. Meth. in Eng., 2024;00:1–6.
 
 """
 class MultiTimeStep:
@@ -36,6 +36,8 @@ class MultiTimeStep:
         # Reduction Factor Values
         self.large_alpha = 0.0
         self.small_alpha = 0.0
+        # Tolerance
+        self.tol = 1e-6
 
     def calc_timestep_ratios(self):
         self.small_tTrial = self.small.t + self.small.dt
@@ -50,23 +52,21 @@ class MultiTimeStep:
         self.small.a_bc.indexes.append(0)
         self.small.a_bc.accelerations.append(self.accelCoupling)
         self.small.single_tstep_integrate()
-
         self.small.assemble_internal()
         self.calc_timestep_ratios()
 
-    def integrate(self):
-    
+    def integrate(self):    
         if ((self.large.t == 0) and (self.small.t == 0)):
             self.small.assemble_internal()
             self.large.assemble_internal()
             self.f_int_Gamma = self.large.f_int[-1] + self.small.f_int[0]
             self.calc_timestep_ratios()
 
-        while (self.nextTimeStepRatio <= 1 or (self.currTimeStepRatio <= 1 and self.nextTimeStepRatio <= 1.000001)):
+        while (self.nextTimeStepRatio <= 1 or (self.currTimeStepRatio <= 1 and self.nextTimeStepRatio <= 1 + self.tol)):
             # Integrate Small Domain
             self.update_small_domain()
 
-        # Compute Pullback Values
+        # Compute Reduction Factors 
         self.alpha_L = 1 - ((self.large_tTrial - self.small.t)/(self.large_tTrial - self.large.t))
         self.alpha_s = 1 - ((self.small_tTrial - self.large_tTrial)/(self.small_tTrial - self.small.t))
 
@@ -80,10 +80,10 @@ class MultiTimeStep:
         self.large.a_bc.indexes.append(-1)
         self.large.a_bc.accelerations.append(self.accelCoupling)
         self.large.single_tstep_integrate()
-
         self.large.assemble_internal()        
         self.calc_timestep_ratios()
 
+        # Interface Internal Force Summation
         self.f_int_Gamma = self.large.f_int[-1] + self.small.f_int[0]  
 
 def proposedCoupling():
@@ -93,7 +93,7 @@ def proposedCoupling():
     E_s = (np.pi/0.02)**2 * rho # Non Integer Time Step Ratio = pi
     Courant = 0.5
     Length = 50e-3
-    propTime = 1.75 * Length * np.sqrt(rho / E_L)    
+    propTime = 1.75 * Length * np.sqrt(rho / E_L) 
     def vel(t): return vbc.velbcSquareWave(t, 2 * Length , E_L, rho)
     accelBCs_L = abc(list(),list())
     accelBCs_s = abc(list(),list())
@@ -101,6 +101,7 @@ def proposedCoupling():
     upd_smallDomain = SimpleIntegrator("total", E_s, rho, Length * 2, 1, nElemLarge * 2, propTime, None, accelBCs_s, Co=Courant)
     upd_fullDomain = MultiTimeStep(upd_largeDomain, upd_smallDomain)
     
+    # Initilise Plotting
     plot = Plot()
     animate = Animation(plot)
 
