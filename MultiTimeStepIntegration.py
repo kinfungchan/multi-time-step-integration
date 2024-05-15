@@ -207,7 +207,7 @@ def newCoupling(vel_csv, stability_plots):
                    upd_fullDomain.large.position, upd_fullDomain.small.position, upd_fullDomain.large.L)
 
     # Simulation Ended - Post-Processing
-    animate.save_gifs()
+    animate.save_MTS_gifs()
     if (stability_plots):
         # Over Large Time Steps
         stability.plot_LMEquiv(csv=False)

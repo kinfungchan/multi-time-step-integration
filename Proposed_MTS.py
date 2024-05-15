@@ -132,7 +132,7 @@ def proposedCoupling():
                                      "Stress", "Domain Position (m)", "Stress (Pa)",
                                      animate.filenames_stress, upd_fullDomain.large.n,
                                      ["Large", "Small"])
-    animate.save_gifs()
+    animate.save_MTS_gifs()
 
 if __name__ == "__main__":
     proposedCoupling()

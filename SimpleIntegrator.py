@@ -1,9 +1,8 @@
 import numpy as np
-import matplotlib.pyplot as plt
 from BoundaryConditions import  VelBoundaryConditions as vbc
 from BoundaryConditions import  AccelBoundaryConditions as abc
-import imageio
-import os
+from Visualise import Plot, Animation
+
 """
 This module Integrates in Time a 1D Domain using the following algorithm 
 from Belytschko´s Non  Linear Finite Elements for Continua and Structures
@@ -30,7 +29,6 @@ Module get f
 6. Compute external nodal force and f = fext - fint
 7. Scatter to global matrix
 """
-
 
 class SimpleIntegrator:
     """
@@ -94,7 +92,6 @@ class SimpleIntegrator:
         bulk_viscosity_stress =  rho * dx * (-BV_lin)
         # Include bulk viscosity term in stress update
         stress -= bulk_viscosity_stress  # Add bulk viscosity term
-
 
     def assemble_internal(self):
         if (self.formulation == "updated"):
@@ -169,70 +166,6 @@ class SimpleIntegrator:
         self.kinetic_energy.append(ke)
         self.internal_energy.append(ie)
         self.tot_energy.append(ke+ie)
-        
-
-class Visualise_Monolithic:
-
-    def __init__(self, totalLagrangian: SimpleIntegrator, updatedLagrangian: SimpleIntegrator):
-
-        self.total = totalLagrangian
-        self.updated = updatedLagrangian
-        self.filenames_accel = []
-        self.filenames_vel = []
-        self.filenames_disp = []
-        self.filenames_stress = []
-        self.filenames_bulk_viscosity_stress = []
-
-    def plot(self, totVariable, updVariable, totPosition, updPosition, title, xlabel, ylabel, filenames):
-        filenames.append(f'FEM1D_{title}{self.total.n}.png')
-        plt.style.use('ggplot')
-        plt.plot(totPosition, totVariable, "--")
-        plt.plot(updPosition, updVariable)
-        plt.title(title,fontsize=12)
-        plt.xlabel(xlabel)
-        plt.ylabel(ylabel)
-        plt.legend([f"Tot Lagr at T_t = {self.total.t:.8f}", f"Upd Lagr at T_l = {self.updated.t:.8f}"])
-        plt.savefig(f'FEM1D_{title}{self.total.n}.png')
-        plt.close()
-
-    def plot_accel(self):
-        self.plot(self.total.a, self.updated.a, self.total.position, self.updated.position, "Acceleration", "Domain Position (m)", "Acceleration (m/s^2)", self.filenames_accel)
-
-    def plot_vel(self):
-        self.plot(self.total.v, self.updated.v, self.total.position, self.updated.position, "Velocity", "Domain Position (m)", "Velocity (m/s)", self.filenames_vel)
-
-    def plot_disp(self):
-        self.plot(self.total.u, self.updated.u, self.total.position, self.updated.position, "Displacement", "Domain Position (m)", "Displacement (m)", self.filenames_disp)
-
-    def plot_stress(self):
-        self.plot(self.total.stress, self.updated.stress, self.total.midposition, self.updated.midposition, "Element Stress", "Domain Position (m)", "Stress (Pa)", self.filenames_stress)
-
-    def plot_bulk_viscosity_stress(self):
-        self.plot(self.total.bulk_viscosity_stress, self.updated.bulk_viscosity_stress, self.total.midposition, self.updated.midposition, "Element Bulk Viscosity Stress", "Domain Position (m)", "Stress (Pa)", self.filenames_bulk_viscosity_stress)
-
-    def plot_energy(self):
-        plt.style.use('ggplot')
-        plt.locator_params(axis='both', nbins=4)
-        plt.plot(self.total.timestamps, self.total.kinetic_energy, "--")
-        plt.plot(self.updated.timestamps, self.updated.kinetic_energy)
-        plt.plot(self.total.timestamps, self.total.internal_energy, "--")
-        plt.plot(self.updated.timestamps, self.updated.internal_energy)
-        plt.plot(self.total.timestamps, self.total.tot_energy, "--")
-        plt.plot(self.updated.timestamps, self.updated.tot_energy)
-        plt.title(f"Elastic Energies for a Half Sine Excitation",fontsize=12)
-        plt.xlabel("Time (s)")
-        plt.ylabel("Energy (N)")
-        plt.legend([f"Total Lagrangian KE", "Updated Lagrangian KE","Total Lagrangian IE", "Updated Lagrangian","Total Tot Lagrangian Total Energy", "Updated Tot Lagrangian Total Energy"])
-        plt.savefig(f'FEM1D_enbal.png')
-        plt.close()
-
-    def create_gif(self, gif_name, filenames):
-        with imageio.get_writer(gif_name, mode='I') as writer:
-            for filename in filenames:
-                image = imageio.imread(filename)
-                writer.append_data(image)
-        for filename in set(filenames):
-            os.remove(filename)
 
 """
 Example from N.Bombace Thesis 2018
@@ -256,7 +189,10 @@ def monolithic():
     upd_formulation = "updated"
     tot_bar = SimpleIntegrator(tot_formulation, E, rho, L, 1, n_elem, 2*propTime, velboundaryConditions, None, Co=0.9)
     upd_bar = SimpleIntegrator(upd_formulation, E, rho, L, 1, n_elem, 2*propTime, velboundaryConditions, None, Co=0.9)
-    bar = Visualise_Monolithic(tot_bar, upd_bar) 
+
+    plot = Plot()
+    animate = Animation(plot)
+
     while tot_bar.t <= tot_bar.tfinal:
         upd_bar.assemble_internal()
         upd_bar.single_tstep_integrate()
@@ -264,18 +200,42 @@ def monolithic():
         tot_bar.single_tstep_integrate()
         if tot_bar.n % 20 == 0:
             print(f"Time: {tot_bar.t} s")
-            bar.plot_accel()
-            bar.plot_vel()
-            bar.plot_disp()
-            bar.plot_stress()
-            bar.plot_bulk_viscosity_stress()
-    bar.plot_energy()
-    # The evolution of Velocity, Displacement and Stress is plotted in the following gifs
-    bar.create_gif('Updated_and_Total_1DFEM_accel.gif', bar.filenames_accel)
-    bar.create_gif('Updated_and_Total_1DFEM_vel.gif', bar.filenames_vel)
-    bar.create_gif('Updated_and_Total_1DFEM_disp.gif', bar.filenames_disp)
-    bar.create_gif('Updated_and_Total_1DFEM_stress.gif', bar.filenames_stress)
-    bar.create_gif('Updated_and_Total_1DFEM_bulk_viscosity_stress.gif', bar.filenames_bulk_viscosity_stress)
+
+            animate.save_single_plot(2, [upd_bar.position, tot_bar.position],
+                                     [upd_bar.a, tot_bar.a],
+                                     "Acceleration", "Domain Position (m)", "Acceleration (m/s^2)",
+                                     animate.filenames_accel, upd_bar.n,
+                                     ["Updated", "Total"])
+            animate.save_single_plot(2, [upd_bar.position, tot_bar.position],
+                                     [upd_bar.v, tot_bar.v],
+                                     "Velocity", "Domain Position (m)", "Velocity (m/s)",
+                                     animate.filenames_vel, upd_bar.n,
+                                     ["Updated", "Total"])
+            animate.save_single_plot(2, [upd_bar.position, tot_bar.position],
+                                     [upd_bar.u, tot_bar.u],
+                                     "Displacement", "Domain Position (m)", "Displacement (m)",
+                                     animate.filenames_disp, upd_bar.n,
+                                     ["Updated", "Total"])
+            animate.save_single_plot(2, [upd_bar.midposition, tot_bar.midposition],
+                                     [upd_bar.stress, tot_bar.stress],
+                                     "Stress", "Domain Position (m)", "Stress (Pa)",
+                                     animate.filenames_stress, upd_bar.n,
+                                     ["Updated", "Total"])
+            animate.save_single_plot(2, [upd_bar.midposition, tot_bar.midposition],
+                                     [upd_bar.bulk_viscosity_stress, tot_bar.bulk_viscosity_stress],
+                                     "Stress_BV", "Domain Position (m)", "Bulk Viscosity Stress (Pa)",
+                                     animate.filenames_bv, upd_bar.n,
+                                     ["Updated", "Total"])
+    # Energy Balance
+    plot.plot(6, [tot_bar.timestamps, upd_bar.timestamps, tot_bar.timestamps,
+                  upd_bar.timestamps, tot_bar.timestamps, upd_bar.timestamps], 
+                 [tot_bar.kinetic_energy, upd_bar.kinetic_energy, tot_bar.internal_energy,
+                  upd_bar.internal_energy, tot_bar.tot_energy, upd_bar.tot_energy], 
+                 "Energy Balance", "Time (s)", "Energy (J)", 
+                 ["Total KE", "Updated KE", "Total IE", "Updated IE", "Total KE+IE", "Updated KE+IE"],
+                 [None, None], [None, None], True)
+
+    animate.save_monolithic_gifs()
 
 if __name__ == "__main__":
     monolithic()

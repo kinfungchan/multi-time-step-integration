@@ -47,6 +47,7 @@ class Animation:
         self.filenames_vel = []
         self.filenames_disp = []
         self.filenames_stress = []
+        self.filenames_bv = []
      
     def save_single_plot(self, n_plots, x, y, title, xlabel, ylabel, filenames, n, t):
         filenames.append(f'FEM1D_{title}{n}.png')
@@ -64,9 +65,16 @@ class Animation:
         for filename in set(filenames):
             os.remove(filename)
 
-    def save_gifs(self):
+    def save_MTS_gifs(self):
         self.create_gif('Proposed_Multi-time-step_accel.gif', self.filenames_accel)
         self.create_gif('Proposed_Multi-time-step_vel.gif', self.filenames_vel)
         self.create_gif('Proposed_Multi-time-step_disp.gif', self.filenames_disp)
         self.create_gif('Proposed_Multi-time-step_stress.gif', self.filenames_stress)
+
+    def save_monolithic_gifs(self):
+        self.create_gif('Monolithic_accel.gif', self.filenames_accel)
+        self.create_gif('Monolithic_vel.gif', self.filenames_vel)
+        self.create_gif('Monolithic_disp.gif', self.filenames_disp)
+        self.create_gif('Monolithic_stress.gif', self.filenames_stress)
+        self.create_gif('Monolithic_bv.gif', self.filenames_bv)
         
