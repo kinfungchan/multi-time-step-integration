@@ -8,6 +8,7 @@ class SubdomainEnergy:
         # Subdomain Energy Balance
         self.KE = np.array([0.0]) # Kinetic Energy
         self.IE = np.array([0.0]) # Internal Energy
+        self.XE = np.array([0.0]) # External Energy
         self.EBAL = np.array([0.0]) # Energy Balance
         # Note to Account for External Energy
 
@@ -24,8 +25,9 @@ class SubdomainEnergy:
         self.IE = np.append(self.IE, IE)
 
     def calc_total_energy(self):
-        EBAL = self.KE[-1] + self.IE[-1]
-        self.EBAL = np.append(self.EBAL, EBAL)
+        XE = self.KE[-1] + self.IE[-1]
+        self.XE = np.append(self.XE, XE)
+        self.EBAL = np.append(self.EBAL, self.KE[-1] + self.IE[-1] - self.XE[-1])
 
     def calc_energy_balance_subdomain(self, n_nodes, n_elem, mass, velocity, stress, E, dx):
         self.calc_KE_subdomain(n_nodes, mass, velocity)

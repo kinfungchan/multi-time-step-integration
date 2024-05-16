@@ -34,6 +34,9 @@ class Stability:
         self.lm_s_dts = np.array([0.0])
         self.f_int_L_dts = np.array([0.0])
 
+        self.dW_Link_s = np.array([0.0])
+        self.dW_Link_L = np.array([0.0])
+
         # Kinetic Energy
         self.KE_Gamma_L = np.array([0.0])
         self.KE_Gamma_s = np.array([0.0])
@@ -53,13 +56,22 @@ class Stability:
         if (show):
             # Energy Balance
             W = Plot()
-            W.plot(6, [self.t_small, self.t_sync, self.t_small, self.t_sync, self.t_small, self.t_sync], 
-                    [self.energy_s.KE, self.energy_L.KE, self.energy_s.IE, self.energy_L.IE, self.energy_s.EBAL, self.energy_L.EBAL],
+            W.plot(8, [self.t_small, self.t_sync, self.t_small, self.t_sync, self.t_small, self.t_sync, self.t_small, self.t_sync], 
+                    [self.energy_s.KE, self.energy_L.KE, self.energy_s.IE, self.energy_L.IE, self.energy_s.EBAL, self.energy_L.EBAL, self.energy_s.XE, self.energy_L.XE],
                     "Energy Balance for Large and Small Domains",
                     "Time (s)", "Energy (J)",
-                    ["Large KE", "Small KE", "Large IE", "Small IE", "Large EBAL", "Small EBAL"], 
+                    ["Large KE", "Small KE", "Large IE", "Small IE", "Large EBAL", "Small EBAL", "Large ExtE", "Small ExtE"], 
                     [None, None], [None, None],
                     True)
+
+    def plot_externalWork(self):
+        plt.plot(self.t_sync, self.energy_L.EE)
+        plt.plot(self.t_small, self.energy_s.EE)
+        plt.legend(["Large", "Small"])
+        plt.xlabel("Time (s)")
+        plt.ylabel("Difference in External Work (J)")
+        plt.title("External Work Difference between Large and Small Domains")
+        plt.show()
 
     """
     Stability over a Large Time Step
@@ -208,8 +220,8 @@ class Stability:
         plt.show()
 
     def plot_fintEquiv(self):
-        plt.plot(self.t_small, (self.f_int_L_int - self.f_int_L_rec))
-        # plt.plot(self.t_small, self.f_int_L_rec)
+        plt.plot(self.t_small, (self.f_int_L_int - self.f_int_L_dts))
+        # plt.plot(self.t_small, self.f_int_L_dts)
         # plt.plot(self.t_small, self.f_int_L_int)
         # plt.legend(["Recovered from LM", "Integrated"])
         plt.xlabel("Time (s)")
@@ -236,6 +248,18 @@ class Stability:
         plt.xlabel("Time (s)")        
         plt.title("Acceleration for Interface Small Domain over Small Time Steps")
         plt.show()
+
+    def plot_dW_Link(self):
+        # plt.plot(self.t_sync, self.dW_Link_L + self.dW_Link_s)
+        plt.plot(self.t_sync, self.dW_Link_L)
+        plt.plot(self.t_sync, self.dW_Link_s)
+        plt.legend(["Large", "Small"])
+        plt.ylabel("Increments in Coupling Work (J)")
+        plt.xlabel("Time (s)")
+        plt.title("Link Work for Large and Small Domains over Small Time Steps")
+        plt.show()
+
+
 
     """
     Checking of Drifting Conditions

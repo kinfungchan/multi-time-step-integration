@@ -87,6 +87,9 @@ class MultiTimeStep:
         tempa[-1] = self.accelCoupling()
         k = 0
 
+        dW_Link_s = 0.0 
+        dW_Link_L = 0.0
+
         while (self.nextTimeStepRatio <= 1 or (self.currTimeStepRatio <= 1 and self.nextTimeStepRatio <= 1.000001)):
             # Integrate Small Domain
             self.update_small_domain()
@@ -97,10 +100,10 @@ class MultiTimeStep:
             self.stability.a_tilda = np.append(self.stability.a_tilda, self.small.a_tilda[0])
             self.stability.a_const = np.append(self.stability.a_const, self.accelCoupling())
             self.stability.t_small = np.append(self.stability.t_small, self.small.t)
-            recovered_f_int = self.stability.fint_Equiv(self.large.mass[-1], self.small.mass[0],
-                                      self.small.f_int[0], self.accelCoupling())  
-            lm_L_dts, lm_s_dts, f_int_L_dts = self.stability.f_int_L_equiv(self.large.mass[-1], self.small.mass[0],
-                                                                           self.small.f_int[0], self.accelCoupling())
+            if (k < 3):
+                lm_L_dts, lm_s_dts, f_int_L_dts = self.stability.f_int_L_equiv(self.large.mass[-1], self.small.mass[0],
+                                                                            self.small.f_int[0], self.accelCoupling())
+                dW_Link_s += 0.5 * (self.small.u[0] - self.small.u_prev[0]) * (self.stability.lm_s_dts[-1] + self.stability.lm_s_dts[-2])
             
             # Integrate Large Domain over Small Time Step
             # tempu = tempu + tempv * self.small.dt + tempa * self.small.dt**2 # N.B
@@ -114,7 +117,6 @@ class MultiTimeStep:
             tempf_int[0] += -tempstress[0]
             tempf_int[-1] += tempstress[-1]
             self.stability.f_int_L_int = np.append(self.stability.f_int_L_int, tempf_int[-1]) 
-            self.stability.f_int_L_rec = np.append(self.stability.f_int_L_rec, recovered_f_int)
             self.stability.u_L_int = np.append(self.stability.u_L_int, tempu[-1]) 
             self.stability.u_s = np.append(self.stability.u_s, self.small.u[0])
 
@@ -152,13 +154,21 @@ class MultiTimeStep:
 
         self.stability.energy_L.calc_energy_balance_subdomain(self.large.n_nodes, self.large.n_elem, self.large.mass,
                                                               self.large.v, self.large.stress, self.large.E, self.large.dx)
-
+        
+        lm_L_dts, lm_s_dts, f_int_L_dts = self.stability.f_int_L_equiv(self.large.mass[-1], self.small.mass[0],
+                                                                            self.small.f_int[0], self.accelCoupling())
+        dW_Link_s += 0.5 * (self.small.u[0] - self.small.u_prev[0]) * (self.stability.lm_s_dts[-1] + self.stability.lm_s_dts[-2])
+        self.stability.dW_Link_s = np.append(self.stability.dW_Link_s, dW_Link_s)
         # Stability Calculations over Large Time Step
         lm_L, lm_s, a_f = self.stability.LagrangeMultiplierEquiv(self.large.mass[-1], self.small.mass[0], 
                                                                  self.large.f_int[-1], self.small.f_int[0],
                                                                  (-self.f_int_Gamma / self.mass_Gamma))    
         self.stability.a_diff = np.append(self.stability.a_diff, (np.sqrt((a_f - (-self.f_int_Gamma / self.mass_Gamma))) ** 2))
 
+        dW_Link_L += 0.5 * (self.large.u[-1] - self.large.u_prev[-1]) * (self.stability.lm_L[-1] + self.stability.lm_L[-2])  
+        self.stability.dW_Link_L = np.append(self.stability.dW_Link_L, dW_Link_L)
+
+        # Evaluate W_Links here
         self.stability.calc_W_Gamma_s(self.small.mass[0], a_f, self.small.f_int[0], self.small.u[0])
         self.stability.calc_W_Gamma_L(self.large.mass[-1], a_f, self.large.f_int[-1], self.large.u[-1])
 
@@ -235,6 +245,7 @@ def newCoupling(vel_csv, stability_plots):
         stability.plot_fintEquiv()
         stability.plot_u_Equiv()
         stability.plot_lm_dts()
+        stability.plot_dW_Link()
 
         # Drifting Conditions
         stability.plot_drift(False)
