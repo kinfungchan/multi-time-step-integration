@@ -115,7 +115,7 @@ class MultiTimeStep:
         self.large.single_tstep_integrate()
 
         # Enforce continuity
-        self.large.u[-1] = self.small.u[0]
+        # self.large.u[-1] = self.small.u[0]
         # self.large.v[-1] = self.small.v[0]
 
         # Comparison for other MTS Methods
@@ -222,11 +222,11 @@ def newCoupling(vel_csv, stability_plots):
         ## Interface Stability
         # Over Large Time Steps
         stability.plot_LMEquiv(csv=False)
-        stability.plot_dW_Gamma_dtL(True) # Forces on Interface * Displacement (Large + Small)
+        stability.plot_dW_Gamma_dtL(show=True,csv=True) # Forces on Interface * Displacement (Large + Small)
         
         # Over Small Time Steps              
         stability.plot_lm_dts()
-        stability.plot_dW_Link()
+        stability.plot_dW_Link(show=True,csv=True)
 
         # Drifting Conditions
         stability.plot_drift(True)
