@@ -89,9 +89,9 @@ class SimpleIntegrator:
         c = np.sqrt(E / rho) # Speed of sound
         C1 = 0.06 # Bulk Viscosity Linear Coefficient
         BV_lin = C1 * c * D
-        bulk_viscosity_stress =  rho * dx * (-BV_lin)
+        self.bulk_viscosity_stress =  rho * dx * (-BV_lin)
         # Include bulk viscosity term in stress update
-        stress -= bulk_viscosity_stress  # Add bulk viscosity term
+        stress -= self.bulk_viscosity_stress  # Add bulk viscosity term
 
     def assemble_internal(self):
         if (self.formulation == "updated"):

@@ -80,13 +80,7 @@ class MultiTimeStep:
             self.f_int_Gamma = self.large.f_int[-1] + self.small.f_int[0]
             self.calc_timestep_ratios()
 
-        # Integrate over Small Time Steps
-        tempu = np.copy(self.large.u)
-        tempv = np.copy(self.large.v) # We have continuity without full v (Full V overestimates)
-        tempa = np.copy(self.large.a)
-        tempa[-1] = self.accelCoupling()
         k = 0
-
         dW_Link_s = 0.0 
         dW_Link_L = 0.0
 
@@ -95,30 +89,14 @@ class MultiTimeStep:
             self.update_small_domain()
             k+=1
             self.stability.energy_s.calc_energy_balance_subdomain(self.small.n_nodes, self.small.n_elem, self.small.mass, 
-                                                                  self.small.v, self.small.stress, self.small.E, self.small.dx)
+                                                                  self.small.v, self.small.stress, self.small.bulk_viscosity_stress,
+                                                                  self.small.E, self.small.dx)
 
-            self.stability.a_tilda = np.append(self.stability.a_tilda, self.small.a_tilda[0])
-            self.stability.a_const = np.append(self.stability.a_const, self.accelCoupling())
             self.stability.t_small = np.append(self.stability.t_small, self.small.t)
             if (k < 3):
                 lm_L_dts, lm_s_dts, f_int_L_dts = self.stability.f_int_L_equiv(self.large.mass[-1], self.small.mass[0],
                                                                             self.small.f_int[0], self.accelCoupling())
                 dW_Link_s += 0.5 * (self.small.u[0] - self.small.u_prev[0]) * (self.stability.lm_s_dts[-1] + self.stability.lm_s_dts[-2])
-            
-            # Integrate Large Domain over Small Time Step
-            # tempu = tempu + tempv * self.small.dt + tempa * self.small.dt**2 # N.B
-            tempv = tempv + tempa * self.small.dt
-            tempu = tempu + tempv * self.small.dt
-            tempstrain = np.diff(tempu) / self.large.dx
-            tempstress = tempstrain * self.large.E
-            self.large.apply_bulk_viscosity(tempv, self.large.dx, min(self.large.rho), self.large.E, tempstress)
-            tempf_int = np.zeros(len(tempu))
-            tempf_int[1:-1] = -np.diff(tempstress)
-            tempf_int[0] += -tempstress[0]
-            tempf_int[-1] += tempstress[-1]
-            self.stability.f_int_L_int = np.append(self.stability.f_int_L_int, tempf_int[-1]) 
-            self.stability.u_L_int = np.append(self.stability.u_L_int, tempu[-1]) 
-            self.stability.u_s = np.append(self.stability.u_s, self.small.u[0])
 
         # Compute Pullback Values
         self.alpha_L = 1 - ((self.large_tTrial - self.small.t)/(self.large_tTrial - self.large.t))
@@ -145,7 +123,6 @@ class MultiTimeStep:
         self.steps_L = np.append(self.steps_L, self.large.dt)
         self.el_steps += self.large.n_elem
         self.stability.calc_drift(self.large.a[-1], self.small.a[0], self.large.v[-1], self.small.v[0], self.large.u[-1], self.small.u[0], self.large.t)
-        self.stability.calc_KE_Gamma(self.large.mass[-1], self.large.v[-1], self.small.mass[0], self.small.v[0])
 
         self.large.assemble_internal()        
         self.calc_timestep_ratios()
@@ -153,12 +130,15 @@ class MultiTimeStep:
         self.f_int_Gamma = self.large.f_int[-1] + self.small.f_int[0]  
 
         self.stability.energy_L.calc_energy_balance_subdomain(self.large.n_nodes, self.large.n_elem, self.large.mass,
-                                                              self.large.v, self.large.stress, self.large.E, self.large.dx)
+                                                              self.large.v, self.large.stress, self.large.bulk_viscosity_stress,
+                                                              self.large.E, self.large.dx)
         
         lm_L_dts, lm_s_dts, f_int_L_dts = self.stability.f_int_L_equiv(self.large.mass[-1], self.small.mass[0],
                                                                             self.small.f_int[0], self.accelCoupling())
         dW_Link_s += 0.5 * (self.small.u[0] - self.small.u_prev[0]) * (self.stability.lm_s_dts[-1] + self.stability.lm_s_dts[-2])
         self.stability.dW_Link_s = np.append(self.stability.dW_Link_s, dW_Link_s)
+
+
         # Stability Calculations over Large Time Step
         lm_L, lm_s, a_f = self.stability.LagrangeMultiplierEquiv(self.large.mass[-1], self.small.mass[0], 
                                                                  self.large.f_int[-1], self.small.f_int[0],
@@ -168,9 +148,14 @@ class MultiTimeStep:
         dW_Link_L += 0.5 * (self.large.u[-1] - self.large.u_prev[-1]) * (self.stability.lm_L[-1] + self.stability.lm_L[-2])  
         self.stability.dW_Link_L = np.append(self.stability.dW_Link_L, dW_Link_L)
 
-        # Evaluate W_Links here
-        self.stability.calc_W_Gamma_s(self.small.mass[0], a_f, self.small.f_int[0], self.small.u[0])
-        self.stability.calc_W_Gamma_L(self.large.mass[-1], a_f, self.large.f_int[-1], self.large.u[-1])
+        # Evaluate W_Gamma 
+        self.stability.calc_dW_Gamma_dtL("Small", self.small.mass[0], a_f, self.stability.a_f[-2], self.small.f_int[0], self.stability.f_int_s_prev_dtL, 
+                                       self.small.u[0], self.stability.u_s_prev_dtL)
+        self.stability.calc_dW_Gamma_dtL("Large", self.large.mass[-1], a_f, self.stability.a_f[-2], self.large.f_int[-1], self.large.f_int_prev[-1],
+                                       self.large.u[-1], self.large.u_prev[-1])
+        
+        self.stability.f_int_s_prev_dtL = np.copy(self.small.f_int[0])
+        self.stability.u_s_prev_dtL = np.copy(self.small.u[0])
 
 def newCoupling(vel_csv, stability_plots):
     # Utilise same element size, drive time step ratio with Co.
@@ -237,18 +222,14 @@ def newCoupling(vel_csv, stability_plots):
         ## Interface Stability
         # Over Large Time Steps
         stability.plot_LMEquiv(csv=False)
-        stability.plot_W_Gamma_dtL(True) # Forces on Interface * Displacement (Large + Small)
-        stability.plot_KE_Gamma() # Interface Kinetic Energy over large Time Step
+        stability.plot_dW_Gamma_dtL(True) # Forces on Interface * Displacement (Large + Small)
         
-        # Over Small Time Steps        
-        stability.plot_a_small()        
-        stability.plot_fintEquiv()
-        stability.plot_u_Equiv()
+        # Over Small Time Steps              
         stability.plot_lm_dts()
         stability.plot_dW_Link()
 
         # Drifting Conditions
-        stability.plot_drift(False)
+        stability.plot_drift(True)
 
     plot.plot_dt_bars(upd_fullDomain.steps_L, upd_fullDomain.steps_S, False)
 
