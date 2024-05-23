@@ -3,7 +3,7 @@ from boundaryConditions.BoundaryConditions import VelBoundaryConditions as vbc
 from boundaryConditions.BoundaryConditions import AccelBoundaryConditions as abc
 from proposed.Stability import Stability
 from proposed.Energy import SubdomainEnergy
-from Sandbox import vHalftoCSV
+from literature import vHalftoCSV
 from utils.Visualise import Plot, Animation
 import numpy as np
 

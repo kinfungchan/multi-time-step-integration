@@ -1,6 +1,6 @@
 import numpy as np
-from Sandbox.singleDomain import Domain
-from Sandbox.Cho_PFPB import Visualise_MTS
+from literature.singleDomain import Domain
+from literature.Cho_PFPB import Visualise_MTS
 from boundaryConditions.BoundaryConditions import VelBoundaryConditions as vbc
 from utils.Utils import exportCSV
 

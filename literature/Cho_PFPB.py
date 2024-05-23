@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from Sandbox.singleDomain import Domain
+from literature.singleDomain import Domain
 from boundaryConditions.BoundaryConditions import  VelBoundaryConditions as vbc
 import imageio
 import os

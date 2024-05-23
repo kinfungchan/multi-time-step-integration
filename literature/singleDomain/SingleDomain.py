@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from Sandbox.BoundaryConditions import  VelBoundaryConditions as vbc
+from literature.BoundaryConditions import  VelBoundaryConditions as vbc
 import imageio
 import os
 
