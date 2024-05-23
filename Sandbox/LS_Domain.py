@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from BoundaryConditions import  VelBoundaryConditions as vbc
+from boundaryConditions.BoundaryConditions import  VelBoundaryConditions as vbc
 import imageio
 import os
 from Utils import exportCSV, writeCSV

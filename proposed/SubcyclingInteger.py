@@ -1,5 +1,5 @@
 from SimpleIntegrator import SimpleIntegrator
-from BoundaryConditions import VelBoundaryConditions as vbc
+from boundaryConditions.BoundaryConditions import VelBoundaryConditions as vbc
 import numpy as np
 import matplotlib.pyplot as plt
 import imageio 

@@ -1,9 +1,9 @@
 import numpy as np
-from SingleDomain import Domain
-from Cho_PFPB import Visualise_MTS
-from BoundaryConditions import  VelBoundaryConditions as vbc
+from Sandbox.singleDomain import Domain
+from Sandbox.Cho_PFPB import Visualise_MTS
+from boundaryConditions.BoundaryConditions import  VelBoundaryConditions as vbc
 import matplotlib.pyplot as plt
-from Utils import exportCSV
+from Sandbox.Utils import exportCSV
 
 """
 In this notebook we look to reimplement Asynchronous Direct Time

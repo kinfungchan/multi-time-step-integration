@@ -1,8 +1,8 @@
 import numpy as np
-from SingleDomain import Domain
-from Cho_PFPB import Visualise_MTS
-from BoundaryConditions import  VelBoundaryConditions as vbc
-from Utils import exportCSV
+from Sandbox.singleDomain import Domain
+from Sandbox.Cho_PFPB import Visualise_MTS
+from boundaryConditions.BoundaryConditions import VelBoundaryConditions as vbc
+from Sandbox.Utils import exportCSV
 
 """
 In this notebook we look to reimplement CDM Multistep Time Integration
@@ -13,7 +13,7 @@ Reference: Cho, S. S., Kolman, R., González, J. A., & Park, K. C. (2019).
 Explicit multistep time integration for discontinuous elastic stress wave
 propagation in heterogeneous solids. International Journal for Numerical
 Methods in Engineering, 118(5), 276-302
-
+s
 This script attends to the Numerical Example in Section 4.1 of the paper
 
 """

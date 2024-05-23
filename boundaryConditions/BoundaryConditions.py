@@ -26,7 +26,7 @@ class VelBoundaryConditions:
         else:
             return 0.01 * np.sin(2 * np.pi * freq * t) + 0.001 * np.sin(2 * np.pi * highFreq * t)
         
-    def velbcSquareWave(t, L, E, rho):
+    def velbcSquare(t, L, E, rho):
         sinePeriod = (L / 2) * np.sqrt(rho/E)
         if t >= sinePeriod * 0.5:
             return 0

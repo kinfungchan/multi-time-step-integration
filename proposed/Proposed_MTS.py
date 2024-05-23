@@ -1,8 +1,8 @@
-from SimpleIntegrator import SimpleIntegrator
-from BoundaryConditions import VelBoundaryConditions as vbc
-from BoundaryConditions import AccelBoundaryConditions as abc
+from proposed.SimpleIntegrator import SimpleIntegrator
+from boundaryConditions.BoundaryConditions import VelBoundaryConditions as vbc
+from boundaryConditions.BoundaryConditions import AccelBoundaryConditions as abc
 import numpy as np
-from Visualise import Plot, Animation
+from utils.Visualise import Plot, Animation
 
 """
 This module implements the subcycling algorithm with interface constant acceleration from:
@@ -94,7 +94,7 @@ def proposedCoupling():
     Courant = 0.5
     Length = 50e-3
     propTime = 1.75 * Length * np.sqrt(rho / E_L) 
-    def vel(t): return vbc.velbcSquareWave(t, 2 * Length , E_L, rho)
+    def vel(t): return vbc.velbcSquare(t, 2 * Length , E_L, rho)
     accelBCs_L = abc(list(),list())
     accelBCs_s = abc(list(),list())
     upd_largeDomain = SimpleIntegrator("total", E_L, rho, Length, 1, nElemLarge, propTime, vbc([0], [vel]), accelBCs_L, Co=Courant)

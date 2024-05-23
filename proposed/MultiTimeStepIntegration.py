@@ -1,10 +1,10 @@
-from SimpleIntegrator import SimpleIntegrator
-from BoundaryConditions import VelBoundaryConditions as vbc
-from BoundaryConditions import AccelBoundaryConditions as abc
-from Stability import Stability
-from Energy import SubdomainEnergy
+from proposed.SimpleIntegrator import SimpleIntegrator
+from boundaryConditions.BoundaryConditions import VelBoundaryConditions as vbc
+from boundaryConditions.BoundaryConditions import AccelBoundaryConditions as abc
+from proposed.Stability import Stability
+from proposed.Energy import SubdomainEnergy
 from Sandbox import exportCSV, writeCSV, vHalftoCSV
-from Visualise import Plot, Animation
+from utils.Visualise import Plot, Animation
 import numpy as np
 
 """
@@ -154,7 +154,7 @@ class MultiTimeStep:
         self.stability.f_int_s_prev_dtL = np.copy(self.small.f_int[0])
         self.stability.u_s_prev_dtL = np.copy(self.small.u[0])
 
-def newCoupling(vel_csv, stability_plots):
+def proposedCouplingStability(vel_csv, stability_plots):
     # Utilise same element size, drive time step ratio with Co.
     nElemLarge = 300
     E_L = 0.02e9 
@@ -163,7 +163,7 @@ def newCoupling(vel_csv, stability_plots):
     Courant = 0.5
     Length = 50e-3
     propTime = 1.75 * Length * np.sqrt(rho / E_L)    
-    def vel(t): return vbc.velbcSquareWave(t, 2 * Length , E_L, rho)
+    def vel(t): return vbc.velbcSquare(t, 2 * Length , E_L, rho)
     accelBCs_L = abc(list(),list())
     accelBCs_s = abc(list(),list())
     upd_largeDomain = SimpleIntegrator("total", E_L, rho, Length, 1, nElemLarge, propTime, vbc([0], [vel]), accelBCs_L, Co=Courant)
@@ -238,6 +238,6 @@ def newCoupling(vel_csv, stability_plots):
     print("Time Steps: ", upd_fullDomain.steps_S[:10])
 
 if __name__ == "__main__":
-    newCoupling(False, True) # Export CSV, Stability Plots
+    proposedCouplingStability(False, True) # Export CSV, Stability Plots
 
     

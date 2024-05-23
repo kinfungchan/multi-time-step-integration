@@ -1,4 +1,7 @@
 import os
+"""
+Clean Outputs from Top Level Directory
+"""
 
 folder_path = "./" 
 
@@ -7,6 +10,6 @@ files = os.listdir(folder_path)
 
 # Iterate over the files and delete the .png files
 for file in files:
-    if file.endswith(".png"):
+    if file.endswith(".png") or file.endswith(".gif") or file.endswith(".csv"):
         file_path = os.path.join(folder_path, file)
         os.remove(file_path)

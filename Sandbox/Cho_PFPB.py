@@ -1,8 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from SingleDomain import Domain
-from SingleDomain import Visualise_Monolithic
-from BoundaryConditions import  VelBoundaryConditions as vbc
+from Sandbox.singleDomain import Domain
+from boundaryConditions.BoundaryConditions import  VelBoundaryConditions as vbc
 import imageio
 import os
 

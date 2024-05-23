@@ -1,8 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from Sandbox import exportCSV, writeCSV
-from Energy import SubdomainEnergy
-from Visualise import Plot
+from proposed.Energy import SubdomainEnergy
+from utils.Visualise import Plot
 
 class Stability:
 

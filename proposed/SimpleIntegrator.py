@@ -1,7 +1,7 @@
 import numpy as np
-from BoundaryConditions import  VelBoundaryConditions as vbc
-from BoundaryConditions import  AccelBoundaryConditions as abc
-from Visualise import Plot, Animation
+from boundaryConditions.BoundaryConditions import  VelBoundaryConditions as vbc
+from boundaryConditions.BoundaryConditions import  AccelBoundaryConditions as abc
+from utils.Visualise import Plot, Animation
 
 """
 This module Integrates in Time a 1D Domain using the following algorithm 
@@ -183,7 +183,7 @@ def monolithic():
     L = 50 * 10**-3
     propTime = 0.5*L * np.sqrt(rho / E)
     # def vel(t): return vbc.velbc(t, L, E, rho)
-    def vel(t): return vbc.velbcSquareWave(t, L, E, rho)
+    def vel(t): return vbc.velbcSquare(t, L, E, rho)
     velboundaryConditions = vbc(list([0]), list([vel]))
     tot_formulation = "total"
     upd_formulation = "updated"
@@ -198,7 +198,7 @@ def monolithic():
         upd_bar.single_tstep_integrate()
         tot_bar.assemble_internal()
         tot_bar.single_tstep_integrate()
-        if tot_bar.n % 20 == 0:
+        if tot_bar.n % 10 == 0:
             print(f"Time: {tot_bar.t} s")
 
             animate.save_single_plot(2, [upd_bar.position, tot_bar.position],

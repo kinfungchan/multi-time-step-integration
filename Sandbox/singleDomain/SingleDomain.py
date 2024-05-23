@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from BoundaryConditions import  VelBoundaryConditions as vbc
+from Sandbox.BoundaryConditions import  VelBoundaryConditions as vbc
 import imageio
 import os
 
@@ -228,7 +228,7 @@ if __name__ == '__main__':
         Domain_L.integrate_nb()
         # Domain_L.integrate_pfpb()
         print("Time: ", Domain_L.t)
-        if Domain_L.n % 20 == 0:
+        if Domain_L.n % 10 == 0:
             bar.plot_accel()
             bar.plot_vel()
             bar.plot_disp()
