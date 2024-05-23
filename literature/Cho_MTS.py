@@ -1,6 +1,6 @@
 import numpy as np
 from literature.singleDomain import Domain
-from literature.Cho_PFPB import Visualise_MTS
+from utils.Visualise import Plot, Animation
 from boundaryConditions.BoundaryConditions import VelBoundaryConditions as vbc
 from utils.Utils import exportCSV
 
@@ -17,7 +17,6 @@ s
 This script attends to the Numerical Example in Section 4.1 of the paper
 
 """
-
 
 def solve_Interface_EOM(BMB_L, BMB_S, L_L, L_S, Bat_L, Bat_S):
     """
@@ -219,25 +218,39 @@ def ChoCoupling():
     full_Domain = Multistep(Domain_L, Domain_S, m_int)
 
     # Visualisation
-    bar = Visualise_MTS(full_Domain)
+    plot = Plot()
+    animate = Animation(plot)
 
     # Integrate over time
     while Domain_L.t < 0.0016:
         full_Domain.Cho_multistep()
         print("Time: ", Domain_L.t)
         if Domain_L.n % 100 == 0: 
-            bar.plot_accel()
-            bar.plot_vel()
-            bar.plot_disp()
-            bar.plot_stress()
+            animate.save_single_plot(2, [full_Domain.Large.position, [position + full_Domain.Large.L for position in full_Domain.Small.position]],
+                                     [full_Domain.Large.a, full_Domain.Small.a],
+                                     "Acceleration", "Domain Position (m)", "Acceleration (m/s^2)",
+                                     animate.filenames_accel, full_Domain.Large.n,
+                                     ["Large", "Small"])
+            animate.save_single_plot(2, [full_Domain.Large.position, [position + full_Domain.Large.L for position in full_Domain.Small.position]],
+                                     [full_Domain.Large.v, full_Domain.Small.v],
+                                     "Velocity", "Domain Position (m)", "Velocity (m/s)",
+                                     animate.filenames_vel, full_Domain.Large.n,
+                                     ["Large", "Small"])
+            animate.save_single_plot(2, [full_Domain.Large.position, [position + full_Domain.Large.L for position in full_Domain.Small.position]],
+                                     [full_Domain.Large.u, full_Domain.Small.u],
+                                     "Displacement", "Domain Position (m)", "Displacement (m)",
+                                     animate.filenames_disp, full_Domain.Large.n,
+                                     ["Large", "Small"])
+            animate.save_single_plot(2, [full_Domain.Large.midposition, [position + full_Domain.Large.L for position in full_Domain.Small.midposition]],
+                                     [full_Domain.Large.stress, full_Domain.Small.stress],
+                                     "Stress", "Domain Position (m)", "Stress (Pa)",
+                                     animate.filenames_stress, full_Domain.Large.n,
+                                     ["Large", "Small"])
 
         if Domain_L.n % 900 == 0:
             exportCSV('Square_Cho_v_L2.csv', 'Square_Cho_v_S2.csv', Domain_L, Domain_S)
 
-    bar.create_gif('FEM1DAccel.gif', bar.filenames_accel)
-    bar.create_gif('FEM1DVel.gif', bar.filenames_vel)
-    bar.create_gif('FEM1DDisp.gif', bar.filenames_disp)
-    bar.create_gif('FEM1DStress.gif', bar.filenames_stress)
+    animate.save_MTS_gifs("Cho")
 
     # Print Minimum Time Step for Whole Domain
     print("Minimum Time Step for Whole Domain: ", full_Domain.min_dt)

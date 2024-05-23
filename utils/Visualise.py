@@ -56,20 +56,23 @@ class Animation:
         plt.savefig(f'FEM1D_{title}{n}.png')
         plt.close()
             
-
-    def create_gif(self, gif_name, filenames):
-        with imageio.get_writer(gif_name, mode='I') as writer:
+    def create_gif(self, gif_name, filenames, folder_name):
+        folder_path = os.path.join(os.getcwd(), folder_name)
+        os.makedirs(folder_path, exist_ok=True)
+        gif_path = os.path.join(folder_path, gif_name)
+        with imageio.get_writer(gif_path, mode='I') as writer:
             for filename in filenames:
                 image = imageio.imread(filename)
                 writer.append_data(image)
         for filename in set(filenames):
             os.remove(filename)
 
-    def save_MTS_gifs(self):
-        self.create_gif('Proposed_Multi-time-step_accel.gif', self.filenames_accel)
-        self.create_gif('Proposed_Multi-time-step_vel.gif', self.filenames_vel)
-        self.create_gif('Proposed_Multi-time-step_disp.gif', self.filenames_disp)
-        self.create_gif('Proposed_Multi-time-step_stress.gif', self.filenames_stress)
+    def save_MTS_gifs(self, name):
+        folder_name = f'{name}_MTS_Gifs'
+        self.create_gif(f'{name}_Multi-time-step_accel.gif', self.filenames_accel, folder_name)
+        self.create_gif(f'{name}_Multi-time-step_vel.gif', self.filenames_vel, folder_name)
+        self.create_gif(f'{name}_Multi-time-step_disp.gif', self.filenames_disp, folder_name)
+        self.create_gif(f'{name}_Multi-time-step_stress.gif', self.filenames_stress, folder_name)
 
     def save_monolithic_gifs(self):
         self.create_gif('Monolithic_accel.gif', self.filenames_accel)

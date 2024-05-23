@@ -1,6 +1,5 @@
 import numpy as np
 from singleDomain import Domain
-from Cho_PFPB import Visualise_MTS
 from boundaryConditions.BoundaryConditions import  VelBoundaryConditions as vbc
 from utils.Utils import exportCSV
 import matplotlib.pyplot as plt
@@ -251,19 +250,10 @@ def ChoCoupling():
     Domain_S.dt = Domain_L.dt / m_int
     full_Domain = Multistep(Domain_L, Domain_S, m_int)
 
-    # Visualisation
-    bar = Visualise_MTS(full_Domain)
-
     # Integrate over time
     while Domain_L.t < 0.0016:
         full_Domain.Cho_multistep()
         print("Time: ", Domain_L.t)
-        if Domain_L.n % 500 == 0: 
-            bar.plot_accel()
-            bar.plot_vel()
-            bar.plot_disp()
-            bar.plot_stress()
-
         if Domain_L.n % 900 == 0:
             exportCSV('Square_Cho_v_L2.csv', 'Square_Cho_v_S2.csv', Domain_L, Domain_S)
 
@@ -298,11 +288,6 @@ def ChoCoupling():
     plt.title('Displacement Drift')
     plt.legend()
     plt.show()
-
-    bar.create_gif('FEM1DAccel.gif', bar.filenames_accel)
-    bar.create_gif('FEM1DVel.gif', bar.filenames_vel)
-    bar.create_gif('FEM1DDisp.gif', bar.filenames_disp)
-    bar.create_gif('FEM1DStress.gif', bar.filenames_stress)
 
     # Print Minimum Time Step for Whole Domain
     print("Minimum Time Step for Whole Domain: ", full_Domain.min_dt)

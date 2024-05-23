@@ -21,7 +21,7 @@ def main():
     print("2. Proposed Method with Stability")
     print("3. Cho Method")
     print("4. Dvorak Method")
-    print("5. Run All Methods")  # Add option to run all methods
+    print("5. Run All Methods") 
 
     while True:
         choice = input("Enter the number of your choice (1-5): ")

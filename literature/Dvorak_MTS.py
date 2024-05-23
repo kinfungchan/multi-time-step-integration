@@ -1,9 +1,9 @@
 import numpy as np
 from literature.singleDomain import Domain
-from literature.Cho_PFPB import Visualise_MTS
 from boundaryConditions.BoundaryConditions import  VelBoundaryConditions as vbc
 import matplotlib.pyplot as plt
 from utils.Utils import exportCSV
+from utils.Visualise import Plot, Animation
 
 """
 In this notebook we look to reimplement Asynchronous Direct Time
@@ -296,17 +296,34 @@ def DvorakCoupling():
     full_Domain = Multistep(Domain_L, Domain_S, 3)
 
     # Visualisation
-    bar = Visualise_MTS(full_Domain)
+    plot = Plot()
+    animate = Animation(plot)
 
     # Integrate over time
     while Domain_L.t < 0.0016:
         full_Domain.Dvorak_multistep()
         print("Time: ", Domain_L.t)
         if Domain_L.n % 100 == 0: 
-            bar.plot_accel()
-            bar.plot_vel()
-            bar.plot_disp()
-            bar.plot_stress()
+            animate.save_single_plot(2, [full_Domain.Large.position, [position + full_Domain.Large.L for position in full_Domain.Small.position]],
+                                     [full_Domain.Large.a, full_Domain.Small.a],
+                                     "Acceleration", "Domain Position (m)", "Acceleration (m/s^2)",
+                                     animate.filenames_accel, full_Domain.Large.n,
+                                     ["Large", "Small"])
+            animate.save_single_plot(2, [full_Domain.Large.position, [position + full_Domain.Large.L for position in full_Domain.Small.position]],
+                                     [full_Domain.Large.v, full_Domain.Small.v],
+                                     "Velocity", "Domain Position (m)", "Velocity (m/s)",
+                                     animate.filenames_vel, full_Domain.Large.n,
+                                     ["Large", "Small"])
+            animate.save_single_plot(2, [full_Domain.Large.position, [position + full_Domain.Large.L for position in full_Domain.Small.position]],
+                                     [full_Domain.Large.u, full_Domain.Small.u],
+                                     "Displacement", "Domain Position (m)", "Displacement (m)",
+                                     animate.filenames_disp, full_Domain.Large.n,
+                                     ["Large", "Small"])
+            animate.save_single_plot(2, [full_Domain.Large.midposition, [position + full_Domain.Large.L for position in full_Domain.Small.midposition]],
+                                     [full_Domain.Large.stress, full_Domain.Small.stress],
+                                     "Stress", "Domain Position (m)", "Stress (Pa)",
+                                     animate.filenames_stress, full_Domain.Large.n,
+                                     ["Large", "Small"])
 
         if Domain_L.n % 900 == 0:
             exportCSV('Square_Dvorak_v_L2.csv', 'Square_Dvorak_v_S2.csv', Domain_L, Domain_S)
@@ -315,14 +332,7 @@ def DvorakCoupling():
             # bar.plot_interface_vel()
             # bar.plot_interface_disp()
 
-    bar.create_gif('DvoFEM1DAccel.gif', bar.filenames_accel)
-    bar.create_gif('DvoFEM1DVel.gif', bar.filenames_vel)
-    bar.create_gif('DvoFEM1DDisp.gif', bar.filenames_disp)
-    bar.create_gif('DvoFEM1DStress.gif', bar.filenames_stress)
-    
-    # bar.create_gif('DvoFEM1DAccel_r.gif', bar.filenames_accel_r)
-    # bar.create_gif('DvoFEM1DVel_r.gif', bar.filenames_vel_r)
-    # bar.create_gif('DvoFEM1DDisp_r.gif', bar.filenames_disp_r)
+    animate.save_MTS_gifs("Dvorak")
 
     # plot_dW_Link
     plt.plot(full_Domain.t_sync, full_Domain.dW_Link_L + full_Domain.dW_Link_S, label='Total')

@@ -211,7 +211,8 @@ def proposedCouplingStability(vel_csv, stability_plots):
                    upd_fullDomain.large.position, upd_fullDomain.small.position, upd_fullDomain.large.L)
 
     # Simulation Ended - Post-Processing
-    animate.save_MTS_gifs()
+    animate.save_MTS_gifs("Proposed_Stability")
+    
     if (stability_plots):
         ## Subdomain Stability
         stability.plot_EnergyBalance(True)
