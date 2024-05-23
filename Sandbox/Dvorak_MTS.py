@@ -91,7 +91,17 @@ class Multistep:
         self.min_dt = np.inf
         self.el_steps = 0
 
+        # Stability
+        self.lm_L_dts = np.array([0.0])
+        self.lm_S_dts = np.array([0.0])
+        self.dW_Link_S = np.array([0.0])
+        self.dW_Link_L = np.array([0.0])
+        self.t_sync = np.array([0.0])
+
     def solve_subframes(self):
+        u_prev_L = np.copy(self.u_r_L[-1])
+        u_prev_S = np.copy(self.u_r_S[0])
+
         self.dt_f = min(self.t_s_new - self.t_f, self.t_L_new - self.t_f) # 2.2 
 
         # Extract Last 3x3 in Large M, Large K and Last 3x1 in Large f_ext
@@ -133,6 +143,9 @@ class Multistep:
         self.Lambda_n1r_L = (1 / self.BMB_L) * (Bat_njS_L - a_n1_f) # 3.(b)
         self.Lambda_n1r_S = -self.Lambda_n1r_L
 
+        self.lm_L_dts = np.append(self.lm_L_dts, self.Lambda_n1r_L)
+        self.lm_S_dts = np.append(self.lm_S_dts, self.Lambda_n1r_S)
+
         # Solution of Small Region
         self.u_r_S = ut_njS_S_r
         self.a_r_S = at_njS_S_r - np.dot(np.linalg.inv(M_S_r), (B_S_r * self.Lambda_n1r_S)) 
@@ -155,6 +168,10 @@ class Multistep:
         self.n_f += 1
         self.steps_f = np.append(self.steps_f, self.dt_f)
         self.el_steps += 4 # 2 elements of S and L Domain
+
+        self.t_sync = np.append(self.t_sync, self.t_f)
+        self.dW_Link_L = np.append(self.dW_Link_L, 0.5 * (self.u_r_L[-1] - u_prev_L) * (self.Lambda_n1r_L + self.lm_L_dts[-2]))
+        self.dW_Link_S = np.append(self.dW_Link_S, 0.5 * (self.u_r_S[0] - u_prev_S) * (self.Lambda_n1r_S + self.lm_S_dts[-2]))
 
     def solve_subdomains(self, Domain: Domain, Lambda_n1r, invM_r, B_r):
         Domain.element_update()
@@ -306,6 +323,16 @@ def DvorakCoupling():
     # bar.create_gif('DvoFEM1DAccel_r.gif', bar.filenames_accel_r)
     # bar.create_gif('DvoFEM1DVel_r.gif', bar.filenames_vel_r)
     # bar.create_gif('DvoFEM1DDisp_r.gif', bar.filenames_disp_r)
+
+    # plot_dW_Link
+    plt.plot(full_Domain.t_sync, full_Domain.dW_Link_L + full_Domain.dW_Link_S, label='Total')
+    # plt.plot(full_Domain.t_sync, full_Domain.dW_Link_L, label='Large')
+    # plt.plot(full_Domain.t_sync, full_Domain.dW_Link_S, label='Small')
+    plt.xlabel('Time (s)')
+    plt.ylabel('dW_Link')
+    plt.title('dW_Link')
+    plt.legend()
+    plt.show()
 
     # Plot Time Histories
     full_Domain.plot_time_steps()

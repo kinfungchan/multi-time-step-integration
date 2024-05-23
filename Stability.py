@@ -239,28 +239,51 @@ class Stability:
     
     """
     def calc_drift(self, a_L, a_s, v_L, v_s, u_L, u_s, t):
-        self.a_drift =  np.append(self.a_drift, a_L - a_s)
-        self.v_drift =  np.append(self.v_drift, v_L - v_s)
-        self.u_drift =  np.append(self.u_drift, u_L - u_s)
+        if (a_L - a_s == 0):
+            self.a_drift = np.append(self.a_diff, 0)
+        else:
+            self.a_drift =  np.append(self.a_drift, (abs(a_L - a_s) / a_L)**2)
+        if (v_L - v_s == 0):
+            self.v_drift = np.append(self.v_drift, 0)
+        else:
+            self.v_drift =  np.append(self.v_drift, (abs(v_L - v_s)/ v_L)**2)
+        if (u_L - u_s == 0):
+            self.u_drift = np.append(self.u_drift, 0)
+        else:
+            self.u_drift =  np.append(self.u_drift, (abs(u_L - u_s) / u_L)**2)
         self.t_sync =  np.append(self.t_sync, t)
 
-    def plot_drift(self, show):
+    def plot_drift(self, show, csv):
         self.P.plot(1, [self.t_sync], [self.a_drift],
                     "Acceleration Drift between Large and Small Domains",
                     "Time (s)", "Acceleration Drift (m/s^2)",
                     ["Acceleration Drift"], 
                     [None, None], [None, None],
                     show)
+        # Root Mean Squared Error
+        a_RMSE = np.sqrt(1/len(self.a_drift) * np.sum(self.a_drift))
+        print("RMSE of Acceleration Drift: ", a_RMSE)
+        if csv:
+            writeCSV("a_drift.csv", self.t_sync, self.a_drift, 't_L', 'a_drift')
+        
         self.P.plot(1, [self.t_sync], [self.v_drift],
                     "Velocity Drift between Large and Small Domains",
                     "Time (s)", "Velocity Drift (m/s)",
                     ["Velocity Drift"], 
                     [None, None], [None, None],
                     show)
+        v_RMSE = np.sqrt(1/len(self.v_drift) * np.sum(self.v_drift))
+        print("RMSE of Velocity Drift: ", v_RMSE)
+        if csv:
+            writeCSV("v_drift.csv", self.t_sync, self.v_drift, 't_L', 'v_drift')
         self.P.plot(1, [self.t_sync], [self.u_drift],
                     "Displacement Drift between Large and Small Domains",
                     "Time (s)", "Displacement Drift (m)",
                     ["Displacement Drift"], 
                     [None, None], [None, None],
                     show)
+        u_RMSE = np.sqrt(1/len(self.u_drift) * np.sum(self.u_drift))
+        print("RMSE of Displacement Drift: ", u_RMSE)
+        if csv:
+            writeCSV("u_drift.csv", self.t_sync, self.u_drift, 't_L', 'u_drift')
         

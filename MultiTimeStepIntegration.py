@@ -6,9 +6,6 @@ from Energy import SubdomainEnergy
 from Sandbox import exportCSV, writeCSV, vHalftoCSV
 from Visualise import Plot, Animation
 import numpy as np
-import matplotlib.pyplot as plt
-import imageio 
-import os
 
 """
 This module implements the subcycling algorithm with interface constant acceleration from:
@@ -229,7 +226,7 @@ def newCoupling(vel_csv, stability_plots):
         stability.plot_dW_Link(show=True,csv=True)
 
         # Drifting Conditions
-        stability.plot_drift(True)
+        stability.plot_drift(show=True,csv=True)
 
     plot.plot_dt_bars(upd_fullDomain.steps_L, upd_fullDomain.steps_S, False)
 
