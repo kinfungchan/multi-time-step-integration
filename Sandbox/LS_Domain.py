@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from boundaryConditions.BoundaryConditions import  VelBoundaryConditions as vbc
 import imageio
 import os
-from Utils import exportCSV, writeCSV
+from utils.Utils import writeCSV
 
 """
 The integrate_nb() method reimplements the Newmark Beta Method for

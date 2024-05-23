@@ -16,43 +16,39 @@ Structures with Explicit Time Integration, I.J. Num. Meth. in Eng.
 """
 
 def main():
-    
-    # Proposed Method
-    run_proposed = input("Do you want to run the Proposed Method? (y/n): ")
-    if run_proposed.lower() == "y":
-        print("Running the Proposed Method")
+    print("Choose a method to run:")
+    print("1. Proposed Method")
+    print("2. Proposed Method with Stability")
+    print("3. Cho Method")
+    print("4. Dvorak Method")
+
+    while True:
+        choice = input("Enter the number of your choice (1-4): ")
+        if choice.isdigit() and 1 <= int(choice) <= 4:
+            choice = int(choice)
+            break
+        else:
+            print("Invalid input. Please enter a number between 1 and 4.")
+
+    method_name = {
+        1: "Proposed Method",
+        2: "Proposed Method with Stability",
+        3: "Cho Method",
+        4: "Dvorak Method",
+    }[choice]
+
+    print(f"\nRunning the {method_name}...\n")
+
+    if choice == 1:
         proposed.proposedCoupling()
-
-    # Proposed Method with Stability
-    run_proposed_stability = input("Do you want to run the Proposed Method with Stability? (y/n): ")
-    if run_proposed_stability.lower() == "y":
-        print("Running the Proposed Method with Stability")
+    elif choice == 2:
         proposed.proposedCouplingStability(False, True)
-
-    # Cho Method
-    run_cho = input("Do you want to run the Cho Method? (y/n): ")
-    if run_cho.lower() == "y":
-        print("Running the Cho Method")
+    elif choice == 3:
         Sandbox.ChoCoupling()
-
-    # Dvorak Method
-    run_dvorak = input("Do you want to run the Dvorak Method? (y/n): ")
-    if run_dvorak.lower() == "y":
-        print("Running the Dvorak Method")
+    elif choice == 4:
         Sandbox.DvorakCoupling()
 
-    # Finished Running the Methods
-    print("Finished Running the Methods")
-    print("Summary of Methods:")
-    if run_proposed.lower() == "y":
-        print("- Proposed Method")
-    if run_proposed_stability.lower() == "y":
-        print("- Proposed Method with Stability")
-    if run_cho.lower() == "y":
-        print("- Cho Method")
-    if run_dvorak.lower() == "y":
-        print("- Dvorak Method")
-
+    print(f"\nThe {method_name} has finished running.\n") 
 
 if __name__ == "__main__":
     main()

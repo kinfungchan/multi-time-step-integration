@@ -2,7 +2,7 @@ import numpy as np
 from singleDomain import Domain
 from Cho_PFPB import Visualise_MTS
 from boundaryConditions.BoundaryConditions import  VelBoundaryConditions as vbc
-from Utils import exportCSV
+from utils.Utils import exportCSV
 import matplotlib.pyplot as plt
 
 """

@@ -1,6 +1,5 @@
 import numpy as np
-import matplotlib.pyplot as plt
-from Sandbox import exportCSV, writeCSV
+from Sandbox import writeCSV
 from proposed.Energy import SubdomainEnergy
 from utils.Visualise import Plot
 

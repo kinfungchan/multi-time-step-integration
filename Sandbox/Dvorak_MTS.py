@@ -3,7 +3,7 @@ from Sandbox.singleDomain import Domain
 from Sandbox.Cho_PFPB import Visualise_MTS
 from boundaryConditions.BoundaryConditions import  VelBoundaryConditions as vbc
 import matplotlib.pyplot as plt
-from Sandbox.Utils import exportCSV
+from utils.Utils import exportCSV
 
 """
 In this notebook we look to reimplement Asynchronous Direct Time
@@ -302,7 +302,7 @@ def DvorakCoupling():
     while Domain_L.t < 0.0016:
         full_Domain.Dvorak_multistep()
         print("Time: ", Domain_L.t)
-        if Domain_L.n % 500 == 0: 
+        if Domain_L.n % 100 == 0: 
             bar.plot_accel()
             bar.plot_vel()
             bar.plot_disp()
