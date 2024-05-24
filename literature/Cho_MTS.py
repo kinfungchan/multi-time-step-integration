@@ -247,9 +247,6 @@ def ChoCoupling():
                                      animate.filenames_stress, full_Domain.Large.n,
                                      ["Large", "Small"])
 
-        if Domain_L.n % 900 == 0:
-            exportCSV('Square_Cho_v_L2.csv', 'Square_Cho_v_S2.csv', Domain_L, Domain_S)
-
     animate.save_MTS_gifs("Cho")
 
     # Print Minimum Time Step for Whole Domain

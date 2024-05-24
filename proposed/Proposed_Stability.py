@@ -220,14 +220,14 @@ def proposedCouplingStability(vel_csv, stability_plots):
         ## Interface Stability
         # Over Large Time Steps
         stability.plot_LMEquiv(csv=False)
-        stability.plot_dW_Gamma_dtL(show=True,csv=True) # Forces on Interface * Displacement (Large + Small)
+        stability.plot_dW_Gamma_dtL(show=True,csv=False) # Forces on Interface * Displacement (Large + Small)
         
         # Over Small Time Steps              
         stability.plot_lm_dts()
-        stability.plot_dW_Link(show=True,csv=True)
+        stability.plot_dW_Link(show=True,csv=False)
 
         # Drifting Conditions
-        stability.plot_drift(show=True,csv=True)
+        stability.plot_drift(show=True,csv=False)
 
     plot.plot_dt_bars(upd_fullDomain.steps_L, upd_fullDomain.steps_S, False)
 

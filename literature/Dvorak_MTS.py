@@ -325,13 +325,6 @@ def DvorakCoupling():
                                      animate.filenames_stress, full_Domain.Large.n,
                                      ["Large", "Small"])
 
-        if Domain_L.n % 900 == 0:
-            exportCSV('Square_Dvorak_v_L2.csv', 'Square_Dvorak_v_S2.csv', Domain_L, Domain_S)
-            print("CSV Time: ", Domain_L.t)
-            # bar.plot_interface_accel()
-            # bar.plot_interface_vel()
-            # bar.plot_interface_disp()
-
     animate.save_MTS_gifs("Dvorak")
 
     # plot_dW_Link

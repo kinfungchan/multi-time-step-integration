@@ -254,8 +254,6 @@ def ChoCoupling():
     while Domain_L.t < 0.0016:
         full_Domain.Cho_multistep()
         print("Time: ", Domain_L.t)
-        if Domain_L.n % 900 == 0:
-            exportCSV('Square_Cho_v_L2.csv', 'Square_Cho_v_S2.csv', Domain_L, Domain_S)
 
     # plot_dW_Link
     plt.plot(full_Domain.t_sync, full_Domain.dW_Link_L + full_Domain.dW_Link_S, label='Total')
