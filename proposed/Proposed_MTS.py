@@ -12,7 +12,7 @@ A Multi-Time Stepping Algorithm for the Modelling of Heterogeneous Structures wi
 I.J. Num. Meth. in Eng., 2024;00:1–6.
 
 """
-class MultiTimeStep:
+class Proposed_MTS:
 
     """
     Constructor for the subcycling class
@@ -99,7 +99,7 @@ def proposedCoupling():
     accelBCs_s = abc(list(),list())
     upd_largeDomain = SimpleIntegrator("total", E_L, rho, Length, 1, nElemLarge, propTime, vbc([0], [vel]), accelBCs_L, Co=Courant)
     upd_smallDomain = SimpleIntegrator("total", E_s, rho, Length * 2, 1, nElemLarge * 2, propTime, None, accelBCs_s, Co=Courant)
-    upd_fullDomain = MultiTimeStep(upd_largeDomain, upd_smallDomain)
+    upd_fullDomain = Proposed_MTS(upd_largeDomain, upd_smallDomain)
     
     # Initilise Plotting
     plot = Plot()

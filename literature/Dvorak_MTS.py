@@ -4,6 +4,7 @@ from boundaryConditions.BoundaryConditions import  VelBoundaryConditions as vbc
 import matplotlib.pyplot as plt
 from utils.Utils import exportCSV
 from utils.Visualise import Plot, Animation
+from main import Bar_1D
 
 """
 In this notebook we look to reimplement Asynchronous Direct Time
@@ -21,7 +22,7 @@ PROBLEM WHILE MAINTAINING ZERO INTERFACE ENERGY.", pp9-10 2023.
 
 """
 
-class Multistep:
+class Dvo_MTS:
     """
     Constructor for the One Dimensional Domain class
 
@@ -269,32 +270,24 @@ class Multistep:
         plt.legend()
         plt.show()
 
-def DvorakCoupling():
-    # Initialise Domains
-    # Large Domain
-    E_L = 0.02 * 10**9 # 0.02GPa
-    rho_L = 8000 # 8000kg/m^3
-    # E_S = 0.18 * 10**9 # Integer Time Step Ratio = 3    
-    E_S = (np.pi/0.02)**2 * rho_L # Non Integer Time Step Ratio = pi
-    length_L = 50 * 10**-3 # 50mm
-    length_S = 2 * 50 * 10**-3 # 100mm
-    area_L = 1 # 1m^2
-    num_elements_L = 300
-    num_elements_S = 600
-    safety_Param = 0.5
-    def vel(t): return vbc.velbcSquare(t, 2 * length_L, E_L, rho_L)
+def DvorakCoupling(bar: Bar_1D):
+    def vel(t): return vbc.velbcSquare(t, 2 * bar.length_L, bar.E_L, bar.rho_L)
     velboundaryConditions = vbc(list([0]), list([vel]))
+
     # Large Domain
-    Domain_L = Domain('Large', E_L, rho_L, length_L, area_L, num_elements_L, safety_Param, velboundaryConditions)
+    Domain_L = Domain('Large', bar.E_L, bar.rho_L, bar.length_L, bar.area_L, 
+                       bar.num_elem_L, bar.safety_Param, velboundaryConditions)
     Domain_L.compute_mass_matrix()
     Domain_L.compute_stiffness_matrix()
+
     # Small Domain
-    Domain_S = Domain('Small', E_S, rho_L, length_S, area_L, num_elements_S, safety_Param, None)
+    Domain_S = Domain('Small', bar.E_S, bar.rho_L, bar.length_S, bar.area_L, 
+                       bar.num_elem_S, bar.safety_Param, None)
     Domain_S.compute_mass_matrix()
     Domain_S.compute_stiffness_matrix()
-    # Multistep Combined Domains
-    full_Domain = Multistep(Domain_L, Domain_S, 3)
 
+    # Multistep Combined Domains
+    full_Domain = Dvo_MTS(Domain_L, Domain_S, 3)
     # Visualisation
     plot = Plot()
     animate = Animation(plot)
@@ -351,4 +344,5 @@ def DvorakCoupling():
     print("Time Steps: ", full_Domain.steps_S[:10])
 
 if __name__ == '__main__':
-    DvorakCoupling()
+    bar = Bar_1D()
+    DvorakCoupling(bar)

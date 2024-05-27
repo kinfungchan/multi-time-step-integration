@@ -15,7 +15,7 @@ A Multi-Time Stepping Algorithm for the Modelling of Heterogeneous Structures wi
 I.J. Num. Meth. in Eng., 2023;00:1–6.
 
 """
-class MultiTimeStep:
+class Proposed_MTS_stab:
 
     """
     Constructor for the subcycling class
@@ -172,7 +172,7 @@ def proposedCouplingStability(vel_csv, stability_plots):
     energy_L = SubdomainEnergy()
     energy_s = SubdomainEnergy()
     stability = Stability(energy_L, energy_s)    
-    upd_fullDomain = MultiTimeStep(upd_largeDomain, upd_smallDomain, stability)
+    upd_fullDomain = Proposed_MTS_stab(upd_largeDomain, upd_smallDomain, stability)
 
     # Visualisation Classes
     plot = Plot()
