@@ -171,6 +171,10 @@ def proposedCouplingStability(bar, vel_csv, stability_plots):
     # Visualisation Classes
     plot = Plot()
     animate = Animation(plot)
+    sq_L = np.zeros((3, upd_fullDomain.large.n_nodes))
+    sq_S = np.zeros((3, upd_fullDomain.small.n_nodes))
+    pos_L = upd_fullDomain.large.position
+    pos_S = upd_fullDomain.small.position + upd_fullDomain.large.L
     
     # Solve Loop
     while(upd_fullDomain.large.t <= 0.0016):
@@ -198,11 +202,15 @@ def proposedCouplingStability(bar, vel_csv, stability_plots):
                                      animate.filenames_stress, upd_fullDomain.large.n,
                                      ["Large", "Small"])
 
-        # Export to CSV
-        if (vel_csv):
-            vHalftoCSV(upd_fullDomain.large.t, upd_fullDomain.large.v, upd_fullDomain.small.v,
-                   upd_fullDomain.large.t_prev, upd_fullDomain.large.v_prev, upd_fullDomain.small.v_prev, 
-                   upd_fullDomain.large.position, upd_fullDomain.small.position, upd_fullDomain.large.L)
+        if (upd_fullDomain.large.t > 0.000999 and upd_fullDomain.large.t < 0.001001):
+            sq_L[0] = (upd_fullDomain.large.v + upd_fullDomain.large.v_prev) / 2
+            sq_S[0] = (upd_fullDomain.small.v + upd_fullDomain.small.v_prev) / 2
+        if (upd_fullDomain.large.t > 0.00125 and upd_fullDomain.large.t < 0.0012501):
+            sq_L[1] = (upd_fullDomain.large.v + upd_fullDomain.large.v_prev) / 2
+            sq_S[1] = (upd_fullDomain.small.v + upd_fullDomain.small.v_prev) / 2
+        if (upd_fullDomain.large.t > 0.00150 and upd_fullDomain.large.t < 0.001501):
+            sq_L[2] = (upd_fullDomain.large.v + upd_fullDomain.large.v_prev) / 2
+            sq_S[2] = (upd_fullDomain.small.v + upd_fullDomain.small.v_prev) / 2
 
     # Simulation Ended - Post-Processing
     animate.save_MTS_gifs("Proposed_Stability")
@@ -230,6 +238,6 @@ def proposedCouplingStability(bar, vel_csv, stability_plots):
     # Print Total Number of Integration Steps on Large 
     print("Number of Integration Steps: ", upd_fullDomain.el_steps)
 
-    outputs = Outputs(domains, steps)
+    outputs = Outputs(domains, steps, sq_L, sq_S, pos_L, pos_S)
     return outputs
     

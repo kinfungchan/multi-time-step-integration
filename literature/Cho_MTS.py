@@ -214,6 +214,10 @@ def ChoCoupling(bar):
     # Visualisation
     plot = Plot()
     animate = Animation(plot)
+    sq_L = np.zeros((3, full_Domain.Large.n_nodes))
+    sq_S = np.zeros((3, full_Domain.Small.n_nodes))
+    pos_L = full_Domain.Large.position
+    pos_S = full_Domain.Small.position + full_Domain.Large.L
 
     # Integrate over time
     while Domain_L.t < 0.0016:
@@ -241,6 +245,16 @@ def ChoCoupling(bar):
                                      animate.filenames_stress, full_Domain.Large.n,
                                      ["Large", "Small"])
 
+        if Domain_L.n % 600 == 0: # 0.00100
+            sq_L[0] = full_Domain.Large.v
+            sq_S[0] = full_Domain.Small.v
+        if Domain_L.n % 750 == 0: # 0.00125
+            sq_L[1] = full_Domain.Large.v
+            sq_S[1] = full_Domain.Small.v
+        if Domain_L.n % 900 == 0: # 0.00150
+            sq_L[2] = full_Domain.Large.v
+            sq_S[2] = full_Domain.Small.v
+
     animate.save_MTS_gifs("Cho")
 
     # Print Minimum Time Step for Whole Domain
@@ -251,5 +265,5 @@ def ChoCoupling(bar):
     # Print Total Number of Integration Steps 
     print("Number of Integration Steps: ", full_Domain.el_steps)
 
-    outputs = Outputs(domains, steps)
+    outputs = Outputs(domains, steps, sq_L, sq_S, pos_L, pos_S)
     return outputs

@@ -53,16 +53,16 @@ def main(bar):
     elif choice == 4:
         dvo = literature.DvorakCoupling(bar)
     elif choice == 5:  # Run all methods
-        proposed.proposedCoupling(bar)
+        # proposed.proposedCoupling(bar)
         prop = proposed.proposedCouplingStability(bar, False, True)
         cho = literature.ChoCoupling(bar)
         dvo = literature.DvorakCoupling(bar)
 
-    print(f"\nThe {method_name} has finished running.\n")
+        # Comparison of Methods Outputs
+        paper = Paper(prop, cho, dvo)
+        paper.all_plots()
 
-    # Paper Outputs
-    paper = Paper(prop, cho, dvo)
-    paper.all_plots()
+    print(f"\nThe {method_name} has finished running.\n")
 
 if __name__ == "__main__":
     bar = Bar_1D()
