@@ -154,20 +154,17 @@ class Proposed_MTS_stab:
         self.stability.f_int_s_prev_dtL = np.copy(self.small.f_int[0])
         self.stability.u_s_prev_dtL = np.copy(self.small.u[0])
 
-def proposedCouplingStability(vel_csv, stability_plots):
-    # Utilise same element size, drive time step ratio with Co.
-    nElemLarge = 300
-    E_L = 0.02e9 
-    rho = 8000
-    E_s = (np.pi/0.02)**2 * rho # Non Integer Time Step Ratio = pi
-    Courant = 0.5
-    Length = 50e-3
-    propTime = 1.75 * Length * np.sqrt(rho / E_L)    
-    def vel(t): return vbc.velbcSquare(t, 2 * Length , E_L, rho)
+def proposedCouplingStability(bar, vel_csv, stability_plots):
+    propTime = 1.75 * bar.length_L * np.sqrt(bar.rho_L / bar.E_L)    
+    def vel(t): return vbc.velbcSquare(t, 2 * bar.length_L , bar.E_L, bar.rho_L)
+
     accelBCs_L = abc(list(),list())
     accelBCs_s = abc(list(),list())
-    upd_largeDomain = SimpleIntegrator("total", E_L, rho, Length, 1, nElemLarge, propTime, vbc([0], [vel]), accelBCs_L, Co=Courant)
-    upd_smallDomain = SimpleIntegrator("total", E_s, rho, Length * 2, 1, nElemLarge * 2, propTime, None, accelBCs_s, Co=Courant)
+
+    upd_largeDomain = SimpleIntegrator("total", bar.E_L, bar.rho_L, bar.length_L, 1, 
+                                       bar.num_elem_L, propTime, vbc([0], [vel]), accelBCs_L, Co=bar.safety_Param)
+    upd_smallDomain = SimpleIntegrator("total", bar.E_S, bar.rho_S, bar.length_S, 1,
+                                       bar.num_elem_S, propTime, None, accelBCs_s, Co=bar.safety_Param)
 
     energy_L = SubdomainEnergy()
     energy_s = SubdomainEnergy()
@@ -238,7 +235,5 @@ def proposedCouplingStability(vel_csv, stability_plots):
     print("Time Steps: ", upd_fullDomain.steps_L[:10])
     print("Time Steps: ", upd_fullDomain.steps_S[:10])
 
-if __name__ == "__main__":
-    proposedCouplingStability(False, True) # Export CSV, Stability Plots
 
     

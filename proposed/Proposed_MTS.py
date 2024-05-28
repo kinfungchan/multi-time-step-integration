@@ -86,55 +86,50 @@ class Proposed_MTS:
         # Interface Internal Force Summation
         self.f_int_Gamma = self.large.f_int[-1] + self.small.f_int[0]  
 
-def proposedCoupling():
-    nElemLarge = 300
-    E_L = 0.02e9
-    rho = 8000
-    E_s = (np.pi/0.02)**2 * rho # Non Integer Time Step Ratio = pi
-    Courant = 0.5
-    Length = 50e-3
-    propTime = 1.75 * Length * np.sqrt(rho / E_L) 
-    def vel(t): return vbc.velbcSquare(t, 2 * Length , E_L, rho)
+def proposedCoupling(bar):
+    propTime = 1.75 * bar.length_L * np.sqrt(bar.rho_L / bar.E_L) 
+    def vel(t): return vbc.velbcSquare(t, 2 * bar.length_L , bar.E_L, bar.rho_L)
     accelBCs_L = abc(list(),list())
     accelBCs_s = abc(list(),list())
-    upd_largeDomain = SimpleIntegrator("total", E_L, rho, Length, 1, nElemLarge, propTime, vbc([0], [vel]), accelBCs_L, Co=Courant)
-    upd_smallDomain = SimpleIntegrator("total", E_s, rho, Length * 2, 1, nElemLarge * 2, propTime, None, accelBCs_s, Co=Courant)
-    upd_fullDomain = Proposed_MTS(upd_largeDomain, upd_smallDomain)
+
+    Domain_L = SimpleIntegrator("total", bar.E_L, bar.rho_L, bar.length_L, 1, 
+                                       bar.num_elem_L, propTime, vbc([0], [vel]), accelBCs_L, bar.safety_Param)
+    Domain_S = SimpleIntegrator("total", bar.E_S, bar.rho_S, bar.length_S, 1, 
+                                       bar.num_elem_S, propTime, None, accelBCs_s, bar.safety_Param)
+    full_Domain = Proposed_MTS(Domain_L, Domain_S)
     
     # Initilise Plotting
     plot = Plot()
     animate = Animation(plot)
 
     # Solve Loop
-    while(upd_fullDomain.large.t <= 0.0016):
-        upd_fullDomain.integrate()
+    while(full_Domain.large.t <= 0.0016):
+        full_Domain.integrate()
         
         # Plotting and Saving Figures
-        print("Time: ", upd_fullDomain.large.t)
-        if (upd_fullDomain.large.n % 10 == 0):
-            animate.save_single_plot(2, [upd_fullDomain.large.position, [position + upd_fullDomain.large.L for position in upd_fullDomain.small.position]],
-                                     [upd_fullDomain.large.a, upd_fullDomain.small.a],
+        print("Time: ", full_Domain.large.t)
+        if (full_Domain.large.n % 10 == 0):
+            animate.save_single_plot(2, [full_Domain.large.position, [position + full_Domain.large.L for position in full_Domain.small.position]],
+                                     [full_Domain.large.a, full_Domain.small.a],
                                      "Acceleration", "Domain Position (m)", "Acceleration (m/s^2)",
-                                     animate.filenames_accel, upd_fullDomain.large.n,
+                                     animate.filenames_accel, full_Domain.large.n,
                                      ["Large", "Small"])
-            animate.save_single_plot(2, [upd_fullDomain.large.position, [position + upd_fullDomain.large.L for position in upd_fullDomain.small.position]],
-                                     [upd_fullDomain.large.v, upd_fullDomain.small.v],
+            animate.save_single_plot(2, [full_Domain.large.position, [position + full_Domain.large.L for position in full_Domain.small.position]],
+                                     [full_Domain.large.v, full_Domain.small.v],
                                      "Velocity", "Domain Position (m)", "Velocity (m/s)",
-                                     animate.filenames_vel, upd_fullDomain.large.n,
+                                     animate.filenames_vel, full_Domain.large.n,
                                      ["Large", "Small"])
-            animate.save_single_plot(2, [upd_fullDomain.large.position, [position + upd_fullDomain.large.L for position in upd_fullDomain.small.position]],
-                                     [upd_fullDomain.large.u, upd_fullDomain.small.u],
+            animate.save_single_plot(2, [full_Domain.large.position, [position + full_Domain.large.L for position in full_Domain.small.position]],
+                                     [full_Domain.large.u, full_Domain.small.u],
                                      "Displacement", "Domain Position (m)", "Displacement (m)",
-                                     animate.filenames_disp, upd_fullDomain.large.n,
+                                     animate.filenames_disp, full_Domain.large.n,
                                      ["Large", "Small"])
-            animate.save_single_plot(2, [upd_fullDomain.large.midposition, [position + upd_fullDomain.large.L for position in upd_fullDomain.small.midposition]],
-                                     [upd_fullDomain.large.stress, upd_fullDomain.small.stress],
+            animate.save_single_plot(2, [full_Domain.large.midposition, [position + full_Domain.large.L for position in full_Domain.small.midposition]],
+                                     [full_Domain.large.stress, full_Domain.small.stress],
                                      "Stress", "Domain Position (m)", "Stress (Pa)",
-                                     animate.filenames_stress, upd_fullDomain.large.n,
+                                     animate.filenames_stress, full_Domain.large.n,
                                      ["Large", "Small"])
     animate.save_MTS_gifs("Proposed")
 
-if __name__ == "__main__":
-    proposedCoupling()
 
     

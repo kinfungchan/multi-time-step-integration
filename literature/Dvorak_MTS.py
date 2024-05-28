@@ -4,7 +4,6 @@ from boundaryConditions.BoundaryConditions import  VelBoundaryConditions as vbc
 import matplotlib.pyplot as plt
 from utils.Utils import exportCSV
 from utils.Visualise import Plot, Animation
-from main import Bar_1D
 
 """
 In this notebook we look to reimplement Asynchronous Direct Time
@@ -270,7 +269,7 @@ class Dvo_MTS:
         plt.legend()
         plt.show()
 
-def DvorakCoupling(bar: Bar_1D):
+def DvorakCoupling(bar):
     def vel(t): return vbc.velbcSquare(t, 2 * bar.length_L, bar.E_L, bar.rho_L)
     velboundaryConditions = vbc(list([0]), list([vel]))
 
@@ -343,6 +342,3 @@ def DvorakCoupling(bar: Bar_1D):
     print("Time Steps: ", full_Domain.steps_r_S[:10])
     print("Time Steps: ", full_Domain.steps_S[:10])
 
-if __name__ == '__main__':
-    bar = Bar_1D()
-    DvorakCoupling(bar)

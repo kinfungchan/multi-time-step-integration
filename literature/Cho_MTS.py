@@ -3,7 +3,6 @@ from literature.singleDomain import Domain
 from utils.Visualise import Plot, Animation
 from boundaryConditions.BoundaryConditions import VelBoundaryConditions as vbc
 from utils.Utils import exportCSV
-from main import Bar_1D
 
 """
 In this notebook we look to reimplement CDM Multistep Time Integration
@@ -190,7 +189,7 @@ class Cho_MTS:
         # Update Minimum Time Step
         self.min_dt = min(self.min_dt, self.Small.dt, self.Large.dt)
 
-def ChoCoupling(bar: Bar_1D):
+def ChoCoupling(bar):
     # Initialise Domains
     def vel(t): return vbc.velbcSquare(t, 2 * bar.length_L, bar.E_L, bar.rho_L)
     velboundaryConditions = vbc(list([0]), list([vel]))
@@ -252,7 +251,4 @@ def ChoCoupling(bar: Bar_1D):
     print("Time Steps: ", full_Domain.steps_2El[:10])
     print("Time Steps: ", full_Domain.steps_S[:10])
 
-if __name__ == '__main__':
-    bar = Bar_1D()
-    ChoCoupling(bar)
     
