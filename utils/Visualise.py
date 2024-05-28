@@ -9,6 +9,7 @@ class Plot:
         pass
 
     def plot(self, n_plots, x, y, title, xlabel, ylabel, legend, xlim, ylim, show):
+        plt.figure(figsize=(10, 6))
         plt.style.use('ggplot')
         for i in range(n_plots):
                 plt.plot(x[i], y[i])
@@ -21,20 +22,22 @@ class Plot:
         if show:
             plt.show()
 
-    def plot_dt_bars(self, steps_L, steps_S, show):
-        x = ['L', 'S']
+    def plot_dt_bars(self, domains, steps, show):
         n_steps = 10 # Number of Steps to Plot
-        data = np.empty((n_steps, 2))
+        data = np.empty((n_steps, len(steps)))
+
         for i in range(n_steps):
-            data[i] = np.array([steps_L[i], 
-                                steps_S[i]])
-            
+            for j in range(len(steps)):
+                data[i][j] = steps[j][i]
+
         plt.figure(figsize=(10, 6))
         for i in range(1, n_steps):        
-            plt.bar(x, data[i], bottom=np.sum(data[:i], axis=0), color=plt.cm.tab10(i), label=f'Local Step {i}')
+            plt.bar(domains, data[i], bottom=np.sum(data[:i], axis=0), color=plt.cm.tab10(i), label=f'Local Step {i}')
 
         plt.ylabel('Time (s)')
-        plt.title('Time Steps taken for New Multi-step')
+        plt.xlabel('Domains')
+        plt.xticks(range(len(domains)), domains)
+        plt.title('Comparison of Subdomain Integration Steps for Multi-Time Stepping')
         plt.legend()
         if show:
             plt.show()

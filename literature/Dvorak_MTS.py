@@ -4,6 +4,7 @@ from boundaryConditions.BoundaryConditions import  VelBoundaryConditions as vbc
 import matplotlib.pyplot as plt
 from utils.Utils import exportCSV
 from utils.Visualise import Plot, Animation
+from utils.Paper import Outputs
 
 """
 In this notebook we look to reimplement Asynchronous Direct Time
@@ -248,26 +249,6 @@ class Dvo_MTS:
         self.t_L_new = self.t_L_act + self.Large.dt
 
         self.min_dt = min(self.min_dt, self.dt_f, self.Large.dt)
-       
-    def plot_time_steps(self):
-        x = ['Frame', 'RegionL', 'L', 'RegionS', 'S']
-        n_steps = 10 # Number of Steps to Plot
-        data = np.empty((n_steps, 5))
-        for i in range(n_steps):
-            data[i] = np.array([self.steps_f[i], 
-                                self.steps_r_L[i], 
-                                self.steps_L[i], 
-                                self.steps_r_S[i], 
-                                self.steps_S[i]])
-            
-        plt.figure(figsize=(10, 6))
-        for i in range(1, n_steps):        
-            plt.bar(x, data[i], bottom=np.sum(data[:i], axis=0), color=plt.cm.tab10(i), label=f'Local Step {i}')
-
-        plt.ylabel('Time (s)')
-        plt.title('Time Steps taken for Dvorak Multi-step')
-        plt.legend()
-        plt.show()
 
 def DvorakCoupling(bar):
     def vel(t): return vbc.velbcSquare(t, 2 * bar.length_L, bar.E_L, bar.rho_L)
@@ -319,26 +300,30 @@ def DvorakCoupling(bar):
 
     animate.save_MTS_gifs("Dvorak")
 
-    # plot_dW_Link
-    plt.plot(full_Domain.t_sync, full_Domain.dW_Link_L + full_Domain.dW_Link_S, label='Total')
-    # plt.plot(full_Domain.t_sync, full_Domain.dW_Link_L, label='Large')
-    # plt.plot(full_Domain.t_sync, full_Domain.dW_Link_S, label='Small')
-    plt.xlabel('Time (s)')
-    plt.ylabel('dW_Link')
-    plt.title('dW_Link')
-    plt.legend()
-    plt.show()
+    # # plot_dW_Link
+    # plt.plot(full_Domain.t_sync, full_Domain.dW_Link_L + full_Domain.dW_Link_S, label='Total')
+    # # plt.plot(full_Domain.t_sync, full_Domain.dW_Link_L, label='Large')
+    # # plt.plot(full_Domain.t_sync, full_Domain.dW_Link_S, label='Small')
+    # plt.xlabel('Time (s)')
+    # plt.ylabel('dW_Link')
+    # plt.title('dW_Link')
+    # plt.legend()
+    # plt.show()
 
     # Plot Time Histories
-    full_Domain.plot_time_steps()
+    steps = [full_Domain.steps_f, full_Domain.steps_r_L, full_Domain.steps_L,
+             full_Domain.steps_r_S, full_Domain.steps_S]
+    domains = ['$\Omega_{f}^{Dvo.}$', '$\Omega_{rL}^{Dvo.}$', '$\Omega_L^{Dvo.}$', '$\Omega_{rS}^{Dvo.}$', '$\Omega_S^{Dvo.}$']
+    # plot.plot_dt_bars(domains, steps, True)
+    
     # Print Minimum Time Step for Whole Domain
     print("Minimum Time Step for Whole Domain: ", full_Domain.min_dt)
     # Print Total Number of Integration Steps
     print("Number of Integration Steps: ", full_Domain.el_steps)
-    # Print First 10 Time Steps on Large and Small
-    print("Time Steps: ", full_Domain.steps_f[:10])
-    print("Time Steps: ", full_Domain.steps_r_L[:10])
-    print("Time Steps: ", full_Domain.steps_L[:10])
-    print("Time Steps: ", full_Domain.steps_r_S[:10])
-    print("Time Steps: ", full_Domain.steps_S[:10])
+
+    # Paper Outputs
+    outputs = Outputs(domains, steps)
+    return outputs
+
+
 

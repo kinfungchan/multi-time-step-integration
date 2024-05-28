@@ -2,7 +2,9 @@ import sys
 import os
 import literature
 import proposed
+from utils import Paper
 from bar import Bar_1D
+
 
 # Add the top-level directory to the system path
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
@@ -45,18 +47,22 @@ def main(bar):
     if choice == 1:
         proposed.proposedCoupling(bar)
     elif choice == 2:
-        proposed.proposedCouplingStability(bar, False, True)
+        prop = proposed.proposedCouplingStability(bar, False, True)
     elif choice == 3:
-        literature.ChoCoupling(bar)
+        cho = literature.ChoCoupling(bar)
     elif choice == 4:
-        literature.DvorakCoupling(bar)
+        dvo = literature.DvorakCoupling(bar)
     elif choice == 5:  # Run all methods
         proposed.proposedCoupling(bar)
-        proposed.proposedCouplingStability(bar, False, True)
-        literature.ChoCoupling(bar)
-        literature.DvorakCoupling(bar)
+        prop = proposed.proposedCouplingStability(bar, False, True)
+        cho = literature.ChoCoupling(bar)
+        dvo = literature.DvorakCoupling(bar)
 
     print(f"\nThe {method_name} has finished running.\n")
+
+    # Paper Outputs
+    paper = Paper(prop, cho, dvo)
+    paper.all_plots()
 
 if __name__ == "__main__":
     bar = Bar_1D()

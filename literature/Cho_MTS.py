@@ -3,6 +3,7 @@ from literature.singleDomain import Domain
 from utils.Visualise import Plot, Animation
 from boundaryConditions.BoundaryConditions import VelBoundaryConditions as vbc
 from utils.Utils import exportCSV
+from utils.Paper import Outputs
 
 """
 In this notebook we look to reimplement CDM Multistep Time Integration
@@ -243,12 +244,12 @@ def ChoCoupling(bar):
     animate.save_MTS_gifs("Cho")
 
     # Print Minimum Time Step for Whole Domain
+    steps = [full_Domain.steps_L, full_Domain.steps_2El, full_Domain.steps_S]
+    domains = ['$\Omega_L^{Cho}$', '$\Omega_{2EL}^{Cho}$', '$\Omega_S^{Cho}$']
+
     print("Minimum Time Step for Whole Domain: ", full_Domain.min_dt)
     # Print Total Number of Integration Steps 
     print("Number of Integration Steps: ", full_Domain.el_steps)
-    # Print First 10 Time Steps on Large and Small
-    print("Time Steps: ", full_Domain.steps_L[:10])
-    print("Time Steps: ", full_Domain.steps_2El[:10])
-    print("Time Steps: ", full_Domain.steps_S[:10])
 
-    
+    outputs = Outputs(domains, steps)
+    return outputs

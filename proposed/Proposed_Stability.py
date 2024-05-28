@@ -5,6 +5,7 @@ from proposed.Stability import Stability
 from proposed.Energy import SubdomainEnergy
 from literature import vHalftoCSV
 from utils.Visualise import Plot, Animation
+from utils.Paper import Outputs
 import numpy as np
 
 """
@@ -111,10 +112,6 @@ class Proposed_MTS_stab:
         self.large.a_bc.accelerations.append(self.accelCoupling)
         self.large.single_tstep_integrate()
 
-        # Enforce continuity
-        # self.large.u[-1] = self.small.u[0]
-        # self.large.v[-1] = self.small.v[0]
-
         # Comparison for other MTS Methods
         self.min_dt = min(self.min_dt, self.small.dt, self.large.dt)
         self.steps_L = np.append(self.steps_L, self.large.dt)
@@ -212,7 +209,7 @@ def proposedCouplingStability(bar, vel_csv, stability_plots):
     
     if (stability_plots):
         ## Subdomain Stability
-        stability.plot_EnergyBalance(True)
+        # stability.plot_EnergyBalance(True)
 
         ## Interface Stability
         # Over Large Time Steps
@@ -220,20 +217,19 @@ def proposedCouplingStability(bar, vel_csv, stability_plots):
         stability.plot_dW_Gamma_dtL(show=True,csv=False) # Forces on Interface * Displacement (Large + Small)
         
         # Over Small Time Steps              
-        stability.plot_lm_dts()
+        # stability.plot_lm_dts()
         stability.plot_dW_Link(show=True,csv=False)
 
         # Drifting Conditions
         stability.plot_drift(show=True,csv=False)
 
-    plot.plot_dt_bars(upd_fullDomain.steps_L, upd_fullDomain.steps_S, False)
+    steps = [upd_fullDomain.steps_L, upd_fullDomain.steps_S]
+    domains = ['$\Omega_L^{Prop.}$', '$\Omega_S^{Prop.}$']
 
     print("Minimum Time Step for Large Domain: ", upd_fullDomain.min_dt)
     # Print Total Number of Integration Steps on Large 
     print("Number of Integration Steps: ", upd_fullDomain.el_steps)
-    # Print First 10 Time Steps on Large and Small
-    print("Time Steps: ", upd_fullDomain.steps_L[:10])
-    print("Time Steps: ", upd_fullDomain.steps_S[:10])
 
-
+    outputs = Outputs(domains, steps)
+    return outputs
     
