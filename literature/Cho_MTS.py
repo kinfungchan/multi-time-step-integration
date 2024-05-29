@@ -223,7 +223,7 @@ def ChoCoupling(bar):
     while Domain_L.t < 0.0016:
         full_Domain.Cho_multistep()
         print("Time: ", Domain_L.t)
-        if Domain_L.n % 100 == 0: 
+        if Domain_L.n % 10 == 0: 
             animate.save_single_plot(2, [full_Domain.Large.position, [position + full_Domain.Large.L for position in full_Domain.Small.position]],
                                      [full_Domain.Large.a, full_Domain.Small.a],
                                      "Acceleration", "Domain Position (m)", "Acceleration (m/s^2)",

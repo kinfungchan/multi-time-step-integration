@@ -53,7 +53,7 @@ def main(bar):
     elif choice == 4:
         dvo = literature.DvorakCoupling(bar)
     elif choice == 5:  # Run all methods
-        # proposed.proposedCoupling(bar)
+        proposed.proposedCoupling(bar)
         prop = proposed.proposedCouplingStability(bar, False, True)
         cho = literature.ChoCoupling(bar)
         dvo = literature.DvorakCoupling(bar)

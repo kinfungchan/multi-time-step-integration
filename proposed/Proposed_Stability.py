@@ -180,7 +180,7 @@ def proposedCouplingStability(bar, vel_csv, stability_plots):
     while(upd_fullDomain.large.t <= 0.0016):
         upd_fullDomain.integrate()
         print("Time: ", upd_fullDomain.large.t)
-        if (upd_fullDomain.large.n % 500 == 0): # Adjust Number for output plots (Set High for Debugging)
+        if (upd_fullDomain.large.n % 10 == 0): # Adjust Number for output plots (Set High for Debugging)
             animate.save_single_plot(2, [upd_fullDomain.large.position, [position + upd_fullDomain.large.L for position in upd_fullDomain.small.position]],
                                      [upd_fullDomain.large.a, upd_fullDomain.small.a],
                                      "Acceleration", "Domain Position (m)", "Acceleration (m/s^2)",
@@ -205,7 +205,7 @@ def proposedCouplingStability(bar, vel_csv, stability_plots):
         if (upd_fullDomain.large.t > 0.000999 and upd_fullDomain.large.t < 0.001001):
             sq_L[0] = (upd_fullDomain.large.v + upd_fullDomain.large.v_prev) / 2
             sq_S[0] = (upd_fullDomain.small.v + upd_fullDomain.small.v_prev) / 2
-        if (upd_fullDomain.large.t > 0.00125 and upd_fullDomain.large.t < 0.0012501):
+        if (upd_fullDomain.large.t > 0.001249 and upd_fullDomain.large.t < 0.0012501):
             sq_L[1] = (upd_fullDomain.large.v + upd_fullDomain.large.v_prev) / 2
             sq_S[1] = (upd_fullDomain.small.v + upd_fullDomain.small.v_prev) / 2
         if (upd_fullDomain.large.t > 0.00150 and upd_fullDomain.large.t < 0.001501):
