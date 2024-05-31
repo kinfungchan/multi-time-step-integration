@@ -15,7 +15,6 @@ class Stability:
         # Lagrange Multiplier Equivalence at Large Time Steps
         self.lm_L = np.array([0.0])
         self.lm_s = np.array([0.0])
-        self.a_diff = np.array([0.0])
         self.a_Gamma = np.array([0.0])
         self.a_f = np.array([0.0])
         # Coupling Energy
@@ -113,16 +112,6 @@ class Stability:
                 ["a_Gamma", "a_f"], 
                 [None, None], [None, None],
                 True)
-        # self.P.plot(1, [self.t_sync], [self.a_diff], 
-        #         "Acceleration Difference between Lagrange Multiplier and Proposed Method",
-        #         "Time (s)", r"$\sqrt{(a_f - a_{\Gamma})^2}$ (m/s$^2$)", 
-        #         ["Acceleration Difference"],
-        #         [None, None], [-1e-10, 1e-10],
-        #         True)
-        if (csv):
-            writeCSV("accel_equiv.csv", self.t_sync, self.a_diff, 't_L', 'a_diff')
-            writeCSV("a_f.csv", self.t_sync, self.a_f, 't_L', 'a_f')
-            writeCSV("a_Gamma.csv", self.t_sync, self.a_Gamma, 't_L', 'a_Gamma')
 
     def calc_dW_Gamma_dtL(self, Domain, mass, a_Gamma, a_Gamma_prev, f_int, f_int_prev, u, u_prev):
         if (Domain == "Large"):
@@ -235,7 +224,7 @@ class Stability:
     """
     def calc_drift(self, a_L, a_s, v_L, v_s, u_L, u_s, t):
         if (a_L - a_s == 0):
-            self.a_drift = np.append(self.a_diff, 0)
+            self.a_drift = np.append(self.a_drift, 0)
         else:
             self.a_drift =  np.append(self.a_drift, (abs(a_L - a_s) / a_L)**2)
         if (v_L - v_s == 0):
@@ -249,36 +238,29 @@ class Stability:
         self.t_sync =  np.append(self.t_sync, t)
 
     def plot_drift(self, show, csv):
-        # self.P.plot(1, [self.t_sync], [self.a_drift],
-        #             "Acceleration Drift between Large and Small Domains",
-        #             "Time (s)", "Acceleration Drift (m/s^2)",
-        #             ["Acceleration Drift"], 
-        #             [None, None], [None, None],
-        #             show)
-        # Root Mean Squared Error
-        a_RMSE = np.sqrt(1/len(self.a_drift) * np.sum(self.a_drift))
-        print("RMSE of Acceleration Drift: ", a_RMSE)
+        self.P.plot(1, [self.t_sync], [self.a_drift],
+                    "Acceleration Drift between Large and Small Domains",
+                    "Time (s)", "Acceleration RSE (%)",
+                    ["Acceleration Drift"], 
+                    [None, None], [-10, 100],
+                    show)
         if csv:
             writeCSV("a_drift.csv", self.t_sync, self.a_drift, 't_L', 'a_drift')
         
-        # self.P.plot(1, [self.t_sync], [self.v_drift],
-        #             "Velocity Drift between Large and Small Domains",
-        #             "Time (s)", "Velocity Drift (m/s)",
-        #             ["Velocity Drift"], 
-        #             [None, None], [None, None],
-        #             show)
-        v_RMSE = np.sqrt(1/len(self.v_drift) * np.sum(self.v_drift))
-        print("RMSE of Velocity Drift: ", v_RMSE)
+        self.P.plot(1, [self.t_sync], [self.v_drift],
+                    "Velocity Drift between Large and Small Domains",
+                    "Time (s)", "Velocity RSE (%)",
+                    ["Velocity Drift"], 
+                    [None, None], [-10, 100],
+                    show)
         if csv:
             writeCSV("v_drift.csv", self.t_sync, self.v_drift, 't_L', 'v_drift')
-        # self.P.plot(1, [self.t_sync], [self.u_drift],
-        #             "Displacement Drift between Large and Small Domains",
-        #             "Time (s)", "Displacement Drift (m)",
-        #             ["Displacement Drift"], 
-        #             [None, None], [None, None],
-        #             show)
-        u_RMSE = np.sqrt(1/len(self.u_drift) * np.sum(self.u_drift))
-        print("RMSE of Displacement Drift: ", u_RMSE)
+        self.P.plot(1, [self.t_sync], [self.u_drift],
+                    "Displacement Drift between Large and Small Domains",
+                    "Time (s)", "Displacement RSE (%)",
+                    ["Displacement Drift"], 
+                    [None, None], [-10, 100],
+                    show)
         if csv:
             writeCSV("u_drift.csv", self.t_sync, self.u_drift, 't_L', 'u_drift')
         

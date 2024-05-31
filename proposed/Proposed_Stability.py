@@ -137,7 +137,6 @@ class Proposed_MTS_stab:
         lm_L, lm_s, a_f = self.stability.LagrangeMultiplierEquiv(self.large.mass[-1], self.small.mass[0], 
                                                                  self.large.f_int[-1], self.small.f_int[0],
                                                                  (-self.f_int_Gamma / self.mass_Gamma))    
-        self.stability.a_diff = np.append(self.stability.a_diff, (np.sqrt((a_f - (-self.f_int_Gamma / self.mass_Gamma))) ** 2))
 
         dW_Link_L += 0.5 * (self.large.u[-1] - self.large.u_prev[-1]) * (self.stability.lm_L[-1] + self.stability.lm_L[-2])  
         self.stability.dW_Link_L = np.append(self.stability.dW_Link_L, dW_Link_L)
