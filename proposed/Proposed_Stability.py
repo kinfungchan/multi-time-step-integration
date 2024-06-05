@@ -3,7 +3,6 @@ from boundaryConditions.BoundaryConditions import VelBoundaryConditions as vbc
 from boundaryConditions.BoundaryConditions import AccelBoundaryConditions as abc
 from proposed.Stability import Stability
 from proposed.Energy import SubdomainEnergy
-from literature import vHalftoCSV
 from utils.Visualise import Plot, Animation
 from utils.Paper import Outputs
 import numpy as np
@@ -13,7 +12,7 @@ This module implements the subcycling algorithm with interface constant accelera
 
 K.F. Chan, N. Bombace, D. Sap, D. Wason, and N. Petrinic (2024),
 A Multi-Time Stepping Algorithm for the Modelling of Heterogeneous Structures with Explicit Time Integration, 
-I.J. Num. Meth. in Eng., 2023;00:1–6.
+I.J. Num. Meth. in Eng., 2024;00:1–6.
 
 """
 class Proposed_MTS_stab:
@@ -132,7 +131,6 @@ class Proposed_MTS_stab:
         dW_Link_s += 0.5 * (self.small.u[0] - self.small.u_prev[0]) * (self.stability.lm_s_dts[-1] + self.stability.lm_s_dts[-2])
         self.stability.dW_Link_s = np.append(self.stability.dW_Link_s, dW_Link_s)
 
-
         # Stability Calculations over Large Time Step
         lm_L, lm_s, a_f = self.stability.LagrangeMultiplierEquiv(self.large.mass[-1], self.small.mass[0], 
                                                                  self.large.f_int[-1], self.small.f_int[0],
@@ -216,25 +214,15 @@ def proposedCouplingStability(bar, vel_csv, stability_plots):
     
     if (stability_plots):
         ## Subdomain Stability
-        # stability.plot_EnergyBalance(True)
-
-        ## Interface Stability
-        # Over Large Time Steps
         stability.plot_LMEquiv(csv=False)
-        stability.plot_dW_Gamma_dtL(show=True,csv=False) # Forces on Interface * Displacement (Large + Small)
-        
-        # Over Small Time Steps              
-        # stability.plot_lm_dts()
+        stability.plot_dW_Gamma_dtL(show=True,csv=False)  
         stability.plot_dW_Link(show=True,csv=False)
-
-        # Drifting Conditions
         stability.plot_drift(show=True,csv=False)
 
     steps = [upd_fullDomain.steps_L, upd_fullDomain.steps_S]
     domains = ['$\Omega_L^{Prop.}$', '$\Omega_S^{Prop.}$']
 
     print("Minimum Time Step for Large Domain: ", upd_fullDomain.min_dt)
-    # Print Total Number of Integration Steps on Large 
     print("Number of Integration Steps: ", upd_fullDomain.el_steps)
 
     outputs = Outputs(domains, steps, sq_L, sq_S, pos_L, pos_S)

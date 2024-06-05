@@ -85,24 +85,22 @@ class SimpleIntegrator:
         self.a_tilda = np.zeros(self.n_nodes)
 
     def apply_bulk_viscosity(self, v, dx, rho, E, stress):
-        D = (np.diff(v) / dx) # Deformation Gradient            
-        c = np.sqrt(E / rho) # Speed of sound
-        C1 = 0.06 # Bulk Viscosity Linear Coefficient
+        D = (np.diff(v) / dx)      
+        c = np.sqrt(E / rho) 
+        C1 = 0.06 
         BV_lin = C1 * c * D
         self.bulk_viscosity_stress =  rho * dx * (-BV_lin)
-        # Include bulk viscosity term in stress update
-        stress -= self.bulk_viscosity_stress  # Add bulk viscosity term
+        stress -= self.bulk_viscosity_stress 
 
     def assemble_internal(self):
         if (self.formulation == "updated"):
-            tempdx = [self.position[n]-self.position[n-1] for n in range(1, len(self.position))] # Updated Lagrangian
+            tempdx = [self.position[n]-self.position[n-1] for n in range(1, len(self.position))] 
             self.midposition = [self.position[n] + 0.5 * tempdx[n] for n in range(0, len(self.position)-1)]
             self.rho = self.elMass / tempdx
-            self.dt = self.Co * min(tempdx) * np.sqrt(min(self.rho) / self.E) # Updated Lagrangian
+            self.dt = self.Co * min(tempdx) * np.sqrt(min(self.rho) / self.E) 
             self.strain = (np.diff(self.u) / self.dx) 
             self.stress = self.strain * self.E
 
-            # Bulk Viscosity
             self.apply_bulk_viscosity(self.v, tempdx, self.rho, self.E, self.stress)
 
             self.f_int[1:-1] = -np.diff(self.stress)
@@ -113,7 +111,6 @@ class SimpleIntegrator:
             self.strain = (np.diff(self.u) / self.dx) 
             self.stress = self.strain * self.E
 
-            # Bulk Viscosity
             self.apply_bulk_viscosity(self.v, self.dx, min(self.rho), self.E, self.stress)
 
             self.f_int[1:-1] = -np.diff(self.stress)
@@ -149,93 +146,7 @@ class SimpleIntegrator:
         self.assemble_vbcs(self.t + 0.5 * self.dt)
         self.u += self.v * self.dt
         if (self.formulation == "updated"):
-            self.position += self.u # Updated Lagrangian
+            self.position += self.u
         self.n += 1
-        self.compute_energy()
         self.t += self.dt
         self.f_int.fill(0)
-
-    def compute_energy(self):
-        self.timestamps.append(self.t)
-        ke = 0
-        ie = 0
-        for i in range(self.n_nodes):
-            ke += 0.5 * self.mass[i] * self.v[i]**2
-        for j in range(self.n_elem):
-            ie += ((0.5 * self.stress[j]**2) / self.E) * self.dx
-        self.kinetic_energy.append(ke)
-        self.internal_energy.append(ie)
-        self.tot_energy.append(ke+ie)
-
-"""
-Example from N.Bombace Thesis 2018
-
-Model now matches DARCoMS 1D Model 
-
-In this example we use the simple integrator to simulate a velocity applied BC
-on the first node of the mesh
-
-"""
-def monolithic():
-    n_elem = 300
-    E = 0.02 * 10**9
-    rho = 8000
-    L = 50 * 10**-3
-    propTime = 0.5*L * np.sqrt(rho / E)
-    # def vel(t): return vbc.velbc(t, L, E, rho)
-    def vel(t): return vbc.velbcSquare(t, L, E, rho)
-    velboundaryConditions = vbc(list([0]), list([vel]))
-    tot_formulation = "total"
-    upd_formulation = "updated"
-    tot_bar = SimpleIntegrator(tot_formulation, E, rho, L, 1, n_elem, 2*propTime, velboundaryConditions, None, Co=0.9)
-    upd_bar = SimpleIntegrator(upd_formulation, E, rho, L, 1, n_elem, 2*propTime, velboundaryConditions, None, Co=0.9)
-
-    plot = Plot()
-    animate = Animation(plot)
-
-    while tot_bar.t <= tot_bar.tfinal:
-        upd_bar.assemble_internal()
-        upd_bar.single_tstep_integrate()
-        tot_bar.assemble_internal()
-        tot_bar.single_tstep_integrate()
-        if tot_bar.n % 10 == 0:
-            print(f"Time: {tot_bar.t} s")
-
-            animate.save_single_plot(2, [upd_bar.position, tot_bar.position],
-                                     [upd_bar.a, tot_bar.a],
-                                     "Acceleration", "Domain Position (m)", "Acceleration (m/s^2)",
-                                     animate.filenames_accel, upd_bar.n,
-                                     ["Updated", "Total"])
-            animate.save_single_plot(2, [upd_bar.position, tot_bar.position],
-                                     [upd_bar.v, tot_bar.v],
-                                     "Velocity", "Domain Position (m)", "Velocity (m/s)",
-                                     animate.filenames_vel, upd_bar.n,
-                                     ["Updated", "Total"])
-            animate.save_single_plot(2, [upd_bar.position, tot_bar.position],
-                                     [upd_bar.u, tot_bar.u],
-                                     "Displacement", "Domain Position (m)", "Displacement (m)",
-                                     animate.filenames_disp, upd_bar.n,
-                                     ["Updated", "Total"])
-            animate.save_single_plot(2, [upd_bar.midposition, tot_bar.midposition],
-                                     [upd_bar.stress, tot_bar.stress],
-                                     "Stress", "Domain Position (m)", "Stress (Pa)",
-                                     animate.filenames_stress, upd_bar.n,
-                                     ["Updated", "Total"])
-            animate.save_single_plot(2, [upd_bar.midposition, tot_bar.midposition],
-                                     [upd_bar.bulk_viscosity_stress, tot_bar.bulk_viscosity_stress],
-                                     "Stress_BV", "Domain Position (m)", "Bulk Viscosity Stress (Pa)",
-                                     animate.filenames_bv, upd_bar.n,
-                                     ["Updated", "Total"])
-    # Energy Balance
-    plot.plot(6, [tot_bar.timestamps, upd_bar.timestamps, tot_bar.timestamps,
-                  upd_bar.timestamps, tot_bar.timestamps, upd_bar.timestamps], 
-                 [tot_bar.kinetic_energy, upd_bar.kinetic_energy, tot_bar.internal_energy,
-                  upd_bar.internal_energy, tot_bar.tot_energy, upd_bar.tot_energy], 
-                 "Energy Balance", "Time (s)", "Energy (J)", 
-                 ["Total KE", "Updated KE", "Total IE", "Updated IE", "Total KE+IE", "Updated KE+IE"],
-                 [None, None], [None, None], True)
-
-    animate.save_monolithic_gifs()
-
-if __name__ == "__main__":
-    monolithic()

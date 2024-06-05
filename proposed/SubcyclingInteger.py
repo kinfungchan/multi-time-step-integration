@@ -90,41 +90,10 @@ class Visualise_Subcycling:
             os.remove(filename)
 
 """
-Same example as in the Simple Integrator but this time using Subcycling
-The interface between the two domains is at x = 0.5
-"""
-
-"""
-The unstable coupling integrates the bar WITHOUT the exchange of mass
-"""
-def unstableCoupling():
-    nElemLarge = 125
-    refinementFactor = 2
-    nElemSmall = 125 * refinementFactor
-    E = 207
-    rho = 7.83e-6
-    L = 1
-    Courant = 0.5 # This coupling is unstable and needs a quite low Co number to work.
-    propTime = 1 * L * np.sqrt(rho / E)
-    def vel(t): return vbc.velbc(t, L, E, rho)
-    tot_largeDomain = SimpleIntegrator("total", E, rho, L * 0.5, 1, nElemLarge, propTime, None, None, Co=Courant)
-    tot_smallDomain = SimpleIntegrator("total", E, rho, L * 0.5, 1, nElemSmall, propTime, vbc([nElemSmall], [vel]), None, Co=Courant)
-    tot_fullDomain = Subcycling("unstable", tot_largeDomain, tot_smallDomain, refinementFactor)    
-    upd_largeDomain = SimpleIntegrator("updated", E, rho, L * 0.5, 1, nElemLarge, propTime, None, None, Co=Courant)
-    upd_smallDomain = SimpleIntegrator("updated", E, rho, L * 0.5, 1, nElemSmall, propTime, vbc([nElemSmall], [vel]), None, Co=Courant)
-    upd_fullDomain = Subcycling("unstable", upd_largeDomain, upd_smallDomain, refinementFactor)
-    fullDomain = Visualise_Subcycling(tot_fullDomain, upd_fullDomain)
-    while(upd_fullDomain.large.t <= upd_fullDomain.large.tfinal):
-        upd_fullDomain.integrate()
-        tot_fullDomain.integrate()
-        fullDomain.plot()
-    fullDomain.create_gif()
-
-"""
 The stable coupling integrates the bar with an exchange of mass with the SAME space discretization
 using two different timesteps
 """
-def stableCoupling():
+def BelytschkoCoupling():
     nElemLarge = 250
     refinementFactor = 1
     E = 207
@@ -146,36 +115,8 @@ def stableCoupling():
         fullDomain.plot()
     fullDomain.create_gif()
 
-"""
-Demonstrate Spurious waves
-"""
-def spuriousWave():
-    nElemLarge = 125
-    refinementFactor = 4
-    nElemSmall = 125 * refinementFactor
-    E = 207
-    rho = 7.83e-6
-    L = 1
-    Courant = 0.5  # This coupling is unstable and needs a quite low Co number to work.
-    propTime = 1.0 * L * np.sqrt(rho / E)
-    def vel(t): return vbc.velbcHighFreq(t, L, E, rho)
-    tot_largeDomain = SimpleIntegrator("total", E, rho, L * 0.5, 1, nElemLarge, propTime, None, None, Co=Courant)
-    tot_smallDomain = SimpleIntegrator("total", E, rho, L * 0.5, 1, nElemSmall, propTime, vbc([nElemSmall], [vel]), None, Co=Courant)
-    tot_fullDomain = Subcycling("stable", tot_largeDomain, tot_smallDomain, refinementFactor)
-    upd_largeDomain = SimpleIntegrator("updated", E, rho, L * 0.5, 1, nElemLarge, propTime, None, None, Co=Courant)
-    upd_smallDomain = SimpleIntegrator("updated", E, rho, L * 0.5, 1, nElemSmall, propTime, vbc([nElemSmall], [vel]), None, Co=Courant)
-    upd_fullDomain = Subcycling("stable", upd_largeDomain, upd_smallDomain, refinementFactor)
-    fullDomain = Visualise_Subcycling(tot_fullDomain, upd_fullDomain)
-    while(upd_fullDomain.large.t <= upd_fullDomain.large.tfinal):
-        upd_fullDomain.integrate()
-        tot_fullDomain.integrate()
-        fullDomain.plot()
-    fullDomain.create_gif()
-
 if __name__ == "__main__":
-    # unstableCoupling()
-    stableCoupling()
-    # spuriousWave()
+    BelytschkoCoupling()
 
 
 

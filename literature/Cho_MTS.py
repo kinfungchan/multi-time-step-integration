@@ -2,7 +2,6 @@ import numpy as np
 from literature.singleDomain import Domain
 from utils.Visualise import Plot, Animation
 from boundaryConditions.BoundaryConditions import VelBoundaryConditions as vbc
-from utils.Utils import exportCSV
 from utils.Paper import Outputs
 
 """

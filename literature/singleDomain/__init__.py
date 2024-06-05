@@ -1,1 +1,1 @@
-from .SingleDomain import Domain, Visualise_Monolithic
+from .SingleDomain import Domain

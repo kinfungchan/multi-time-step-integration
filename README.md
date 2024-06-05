@@ -48,7 +48,18 @@ This runs the Non-Integer 1D Numerical Example from Section 3 of the paper where
 <p align="center">
     <b>Fig 2: One-dimensional heterogeneous domain split into two subdomains with a square wave boundary condition </b>
 </p>
-You can expect folder(s) with the .gif outputs from each method ran.
+
+## Directories
+- boundaryConditions: methods of Boundary Conditions for velocity and acceleration
+- figures: stores figures found from the paper and an output gif
+- literature: Cho and Dvorak re-implementation with the single domain solution with push-forward pullback
+- notebooks: Proposed method in .ipynb form
+- proposed: Proposed method with stability calculations ran as an alternative method
+- utils: utilities for visualisation and saving
+
+You can also expect folder(s) with the .gif outputs from each method ran. For the proposed method the velocity time distribution outputs
+
+![MultiTimeStep GIF](figures/Proposed_Multi-time-step_vel.gif)
 
 ## Implementations from Literature
 - Comparison with the current state-of-the-art is made with two methods proposed from literature by Cho et al. and Dvorak et al.
@@ -62,7 +73,7 @@ You can expect folder(s) with the .gif outputs from each method ran.
 
 ## Running from Notebooks
 For those who prefer the use of Jupyter Notebooks, or would like to delve further into the equations of the
-algorithms, a Notebooks folder has been created that repeats the same functionality
+algorithms, a Notebooks folder has been created that repeats the same functionality of the proposed algorithm
 
 ## Further Questions
 For any other questions on how to run the repo or the paper itself, please reach out at kin.chan@eng.ox.ac.uk

@@ -1,8 +1,6 @@
 import numpy as np
 from literature.singleDomain import Domain
 from boundaryConditions.BoundaryConditions import  VelBoundaryConditions as vbc
-import matplotlib.pyplot as plt
-from utils.Utils import exportCSV
 from utils.Visualise import Plot, Animation
 from utils.Paper import Outputs
 
@@ -313,16 +311,6 @@ def DvorakCoupling(bar):
             sq_S[2] = full_Domain.Small.v
 
     animate.save_MTS_gifs("Dvorak")
-
-    # # plot_dW_Link
-    # plt.plot(full_Domain.t_sync, full_Domain.dW_Link_L + full_Domain.dW_Link_S, label='Total')
-    # # plt.plot(full_Domain.t_sync, full_Domain.dW_Link_L, label='Large')
-    # # plt.plot(full_Domain.t_sync, full_Domain.dW_Link_S, label='Small')
-    # plt.xlabel('Time (s)')
-    # plt.ylabel('dW_Link')
-    # plt.title('dW_Link')
-    # plt.legend()
-    # plt.show()
 
     # Plot Time Histories
     steps = [full_Domain.steps_f, full_Domain.steps_r_L, full_Domain.steps_L,

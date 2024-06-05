@@ -5,8 +5,6 @@ import proposed
 from utils import Paper
 from bar import Bar_1D
 
-
-# Add the top-level directory to the system path
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
 """

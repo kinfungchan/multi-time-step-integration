@@ -39,22 +39,6 @@ class Stability:
         self.t_small = np.array([0.0])
 
     """
-    Energy Balance for Subdomains
-
-    Plots
-    - Energy Balance for Large and Small Domains
-    """
-    # def plot_EnergyBalance(self, show):
-    #     # Energy Balance
-    #     self.P.plot(8, [self.t_small, self.t_sync, self.t_small, self.t_sync, self.t_small, self.t_sync, self.t_small, self.t_sync], 
-    #             [self.energy_s.KE, self.energy_L.KE, self.energy_s.IE, self.energy_L.IE, self.energy_s.EBAL, self.energy_L.EBAL, self.energy_s.XE, self.energy_L.XE],
-    #             "Energy Balance for Large and Small Domains",
-    #             "Time (s)", "Energy (J)",
-    #             ["Large KE", "Small KE", "Large IE", "Small IE", "Large EBAL", "Small EBAL", "Large ExtE", "Small ExtE"], 
-    #             [None, None], [None, None],
-    #             show)
-
-    """
     Stability over a Large Time Step
 
     Plots
@@ -99,13 +83,6 @@ class Stability:
         if (csv):
             writeCSV("lm_L_equiv.csv", self.t_sync, self.lm_L, 't_L', 'lm_L')
             writeCSV("lm_s_equiv.csv", self.t_sync, self.lm_s, 't_L', 'lm_s')
-        # self.P.plot(1, [self.t_sync], [self.lm_L + self.lm_s],
-        #         "Difference in Lagrange Multiplier Magnitude for Large and Small Domain",
-        #         "Time (s)", "Lagrange Multiplier (N)",
-        #         ["Large + Small $\lambda$"], 
-        #         [None, None], [None, None],
-        #         True)
-        # Plot a_Gamma and a_f
         self.P.plot(2, [self.t_sync, self.t_sync], [self.a_Gamma, self.a_f],
                 "Fig 6 (R): Accelerations for Proposed Method and Lagrange Multiplier",
                 "Time (s)", "Acceleration (m/s$^2$)",
@@ -128,12 +105,6 @@ class Stability:
             self.dW_Gamma_S_dtL = np.append(self.dW_Gamma_S_dtL, dW_Gamma)
 
     def plot_dW_Gamma_dtL(self, show, csv):
-        # self.P.plot(2, [self.t_sync, self.t_sync], [self.dW_Gamma_L_dtL, self.dW_Gamma_S_dtL],
-        #             "Interface Energy for Large and Small Domains",
-        #             "Time (s)", "Interface Energy ($\delta \Gamma$J)",
-        #             ["$\delta W_{\Gamma L}$", "$\delta W_{\Gamma s}$"], 
-        #             [None, None], [None, None],
-        #             show)
         if (csv):
             writeCSV("dW_Gamma_L.csv", self.t_sync, self.dW_Gamma_L_dtL, 't_L', 'dW_Gamma_L')
             writeCSV("dW_Gamma_s.csv", self.t_sync, self.dW_Gamma_S_dtL, 't_L', 'dW_Gamma_s')
@@ -156,7 +127,6 @@ class Stability:
     - Difference in Increment of Link Work Magnitude for Large and Small Domains over Small Time Steps    
     """
     def fint_Equiv(self, mass_L, mass_s, f_int_s, a_Gamma):
-        # Finding an equivalent Large Internal Force over a Small Time Step
         ta1 = -f_int_s / mass_s
         lm_s = (ta1 - a_Gamma) * mass_s
         lm_L = -lm_s
@@ -185,21 +155,6 @@ class Stability:
         self.lm_s_dts = np.append(self.lm_s_dts, lm_s)
         self.f_int_L_dts = np.append(self.f_int_L_dts, f_int_L)
         return lm_L, lm_s, f_int_L
-    
-    # def plot_lm_dts(self):
-    #     self.P.plot(2, [self.t_small, self.t_small], [self.lm_L_dts, self.lm_s_dts],
-    #                 "Lagrange Multiplier for Large and Small Domains over Small Time Steps",
-    #                 "Time (s)", "Lagrange Multiplier (N)",
-    #                 ["Large $\lambda_L$", "Small $\lambda_s$"], 
-    #                 [None, None], [None, None],
-    #                 True)
-
-    #     self.P.plot(1, [self.t_small], [self.lm_L_dts + self.lm_s_dts],
-    #                 "Difference in Lagrange Multiplier Magnitude for Large and Small Domains over Small Time Steps",
-    #                 "Time (s)", "Lagrange Multiplier (N)",
-    #                 ["Large + Small $\lambda$"], 
-    #                 [None, None], [-1e-12, 1e-12],
-    #                 True)
 
     def plot_dW_Link(self, show, csv):
         self.P.plot(2, [self.t_sync, self.t_sync], [self.dW_Link_L, self.dW_Link_s],
@@ -211,12 +166,6 @@ class Stability:
         if (csv):
             writeCSV("dW_Link_L.csv", self.t_sync, self.dW_Link_L, 't_L', 'dW_Link_L')
             writeCSV("dW_Link_s.csv", self.t_sync, self.dW_Link_s, 't_L', 'dW_Link_s')
-        # self.P.plot(1, [self.t_sync], [self.dW_Link_L + self.dW_Link_s],
-        #             "Difference in Increment of Link Work Magnitude for Large and Small Domains over Small Time Steps",
-        #             "Time (s)", "Increments in Coupling Work (J)",
-        #             ["Large + Small $\delta W_{Link}}$"], 
-        #             [None, None], [None, None],
-        #             show)
 
     """
     Checking of Drifting Conditions

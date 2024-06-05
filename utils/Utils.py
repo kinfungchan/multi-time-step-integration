@@ -8,10 +8,8 @@ def writeCSV(filename, x, y, xlabel, ylabel):
             writer.writerow([x[i], y[i]])
 
 def exportCSV(csv_L, csv_S, Domain_L, Domain_S):
-    # Reading Positions in Domain_L and Domain_S
     pos_L = Domain_L.position
     pos_S = Domain_S.position + Domain_L.L
-    # Reading Velocities in Domain_L and Domain_S
     vel_L = Domain_L.v
     vel_S = Domain_S.v
     

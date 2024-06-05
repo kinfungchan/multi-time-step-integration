@@ -1,9 +1,5 @@
 import numpy as np
-import matplotlib.pyplot as plt
 from boundaryConditions.BoundaryConditions import  VelBoundaryConditions as vbc
-import imageio
-import os
-
 
 """
 In this notebook we look to reimplement the Monolithic time integration for
@@ -162,81 +158,3 @@ class Domain:
         self.assemble_vbcs(self.t)    
         self.t = self.t + self.dt
         self.n += 1
-
-class Visualise_Monolithic:
-
-    def __init__(self, Large: Domain):
-
-        self.domain = Large
-        self.filenames_accel = []
-        self.filenames_vel = []
-        self.filenames_disp = []
-        self.filenames_stress = []
-
-    def plot(self, variable, position, title, xlabel, ylabel, filenames):
-        filenames.append(f'FEM1D_{title}{self.domain.n}.png')
-        plt.style.use('ggplot')
-        plt.plot(position, variable)
-        plt.title(title,fontsize=12)
-        plt.xlabel(xlabel)
-        plt.ylabel(ylabel)
-        plt.legend(["Time: " + format(self.domain.t * 1e6, ".1f") + "us"])
-        plt.savefig(f'FEM1D_{title}{self.domain.n}.png')
-        plt.close()
-        
-    def plot_accel(self):
-        self.plot(self.domain.a, self.domain.position, "Acceleration", "Domain Position (m)", "Acceleration (m/s^2)", self.filenames_accel)
-
-    def plot_vel(self):
-        self.plot(self.domain.v, self.domain.position, "Velocity", "Domain Position (m)", "Velocity (m/s)", self.filenames_vel)
-
-    def plot_disp(self):
-        self.plot(self.domain.u, self.domain.position, "Displacement", "Domain Position (m)", "Displacement (m)", self.filenames_disp)
-
-    def plot_stress(self):
-        self.plot(self.domain.stress, self.domain.midposition, "Stress", "Domain Position (m)", "Stress (Pa)", self.filenames_stress)
-
-    def create_gif(self, gif_name, filenames):
-        with imageio.get_writer(gif_name, mode='I') as writer:
-            for filename in filenames:
-                image = imageio.imread(filename)
-                writer.append_data(image)
-        for filename in set(filenames):
-            os.remove(filename)
-
-if __name__ == '__main__':
-    # Initialise Domains
-    # Large Domain
-    E_L = 0.02 * 10**9 # 0.02GPa
-    rho_L = 8000 # 8000kg/m^3
-    length_L = 50 * 10**-3 # 50mm
-    area_L = 1 # 1m^2
-    num_elements_L = 300
-    safety_Param = 0.5
-    def vel(t): return vbc.velbcSquare(t, length_L, E_L, rho_L)
-    velboundaryConditions = vbc(list([0]), list([vel]))
-
-    Domain_L = Domain('Large', E_L, rho_L, length_L, area_L, num_elements_L, safety_Param, velboundaryConditions)
-    Domain_L.compute_mass_matrix()
-    Domain_L.compute_stiffness_matrix()
-
-    bar = Visualise_Monolithic(Domain_L)
-
-    # Integrate over time
-    while Domain_L.t < 0.001:
-        Domain_L.element_update()
-        Domain_L.integrate_nb()
-        # Domain_L.integrate_pfpb()
-        print("Time: ", Domain_L.t)
-        if Domain_L.n % 10 == 0:
-            bar.plot_accel()
-            bar.plot_vel()
-            bar.plot_disp()
-            bar.plot_stress()
-   
-    bar.create_gif('FEM1DAccel.gif', bar.filenames_accel)
-    bar.create_gif('FEM1DVel.gif', bar.filenames_vel)
-    bar.create_gif('FEM1DDisp.gif', bar.filenames_disp)
-    bar.create_gif('FEM1DStress.gif', bar.filenames_stress)
-
-
