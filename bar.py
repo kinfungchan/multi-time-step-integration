@@ -13,10 +13,10 @@ class Bar_1D:
         self.area_L = 1 
         self.num_elem_L = 300
         # Small Domain
-        self.E_S = (10/0.02)**2 * self.rho_L # Non Integer Time Step Ratio = 10
+        self.E_S = (4.94/0.02)**2 * self.rho_L # Non Integer Time Step Ratio = 4.94
         self.rho_S = self.rho_L
         self.length_S = 2 * 50 * 10**-3 
         self.area_S = self.area_L
         self.num_elem_S = 600
-        self.safety_Param = 0.1
+        self.safety_Param = 0.5
 

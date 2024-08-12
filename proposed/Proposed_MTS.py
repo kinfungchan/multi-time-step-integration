@@ -95,7 +95,7 @@ def proposedCoupling(bar):
     Domain_L = SimpleIntegrator("total", bar.E_L, bar.rho_L, bar.length_L, 1, 
                                        bar.num_elem_L, propTime, vbc([0], [vel]), accelBCs_L, bar.safety_Param)
     Domain_S = SimpleIntegrator("total", bar.E_S, bar.rho_S, bar.length_S, 1, 
-                                       bar.num_elem_S, propTime, None, accelBCs_s, bar.safety_Param / 25)
+                                       bar.num_elem_S, propTime, None, accelBCs_s, bar.safety_Param)
     full_Domain = Proposed_MTS(Domain_L, Domain_S)
     
     # Initilise Plotting
