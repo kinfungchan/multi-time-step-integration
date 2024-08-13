@@ -68,6 +68,8 @@ class SimpleIntegrator:
         self.bulk_viscosity_stress = np.zeros(self.n_elem)
         self.f_int = np.zeros(self.n_nodes)
         self.dt = Co * self.dx * np.sqrt(min(self.rho) / self.E)
+        self.dt_0 = self.dt
+        self.dt_min_fac = 0.01
         nodalMass = 0.5 * min(self.rho) * self.dx
         self.mass = np.ones(self.n_nodes) * nodalMass
         self.mass[1:-1] *= 2
@@ -97,7 +99,11 @@ class SimpleIntegrator:
             tempdx = [self.position[n]-self.position[n-1] for n in range(1, len(self.position))] 
             self.midposition = [self.position[n] + 0.5 * tempdx[n] for n in range(0, len(self.position)-1)]
             self.rho = self.elMass / tempdx
-            self.dt = self.Co * min(tempdx) * np.sqrt(min(self.rho) / self.E) 
+            # Check dt does not drop below 1% of initial value
+            if ((self.Co * min(tempdx) * np.sqrt(min(self.rho) / self.E)) < self.dt_min_fac * self.dt_0):
+                self.dt = self.dt_min_fac * self.dt_0
+            else:
+                self.dt = self.Co * min(tempdx) * np.sqrt(min(self.rho) / self.E) 
             self.strain = (np.diff(self.u) / self.dx) 
             self.stress = self.strain * self.E
 

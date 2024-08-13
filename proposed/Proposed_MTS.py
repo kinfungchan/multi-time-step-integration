@@ -1,8 +1,9 @@
 from proposed.SimpleIntegrator import SimpleIntegrator
 from boundaryConditions.BoundaryConditions import VelBoundaryConditions as vbc
 from boundaryConditions.BoundaryConditions import AccelBoundaryConditions as abc
-import numpy as np
+from database import History
 from utils.Visualise import Plot, Animation
+import numpy as np
 
 """
 This module implements the subcycling algorithm with interface constant acceleration from:
@@ -92,12 +93,16 @@ def proposedCoupling(bar):
     accelBCs_L = abc(list(),list())
     accelBCs_s = abc(list(),list())
 
-    Domain_L = SimpleIntegrator("total", bar.E_L, bar.rho_L, bar.length_L, 1, 
+    Domain_L = SimpleIntegrator("updated", bar.E_L, bar.rho_L, bar.length_L, 1, 
                                        bar.num_elem_L, propTime, vbc([0], [vel]), accelBCs_L, bar.safety_Param)
-    Domain_S = SimpleIntegrator("total", bar.E_S, bar.rho_S, bar.length_S, 1, 
+    Domain_S = SimpleIntegrator("updated", bar.E_S, bar.rho_S, bar.length_S, 1, 
                                        bar.num_elem_S, propTime, None, accelBCs_s, bar.safety_Param)
     full_Domain = Proposed_MTS(Domain_L, Domain_S)
-    
+
+    # Intialise History
+    hst_L = History(Domain_L.position, Domain_L.n_nodes, Domain_L.n_elem)
+    hst_S = History(Domain_S.position, Domain_S.n_nodes, Domain_S.n_elem)    
+
     # Initilise Plotting
     plot = Plot()
     animate = Animation(plot)
@@ -105,10 +110,19 @@ def proposedCoupling(bar):
     # Solve Loop
     while(full_Domain.large.t <= 0.0016):
         full_Domain.integrate()
-        
+
+        # History Data
+        if (full_Domain.large.n % 10 == 0): # Determine frequency of History Data
+            hst_L.append_timestep(full_Domain.large.t, full_Domain.large.position,
+                                full_Domain.large.a, full_Domain.large.v, full_Domain.large.u, 
+                                full_Domain.large.stress, full_Domain.large.strain)
+            hst_S.append_timestep(full_Domain.small.t, full_Domain.small.position,
+                                full_Domain.small.a, full_Domain.small.v, full_Domain.small.u, 
+                                full_Domain.small.stress, full_Domain.small.strain)
+
         # Plotting and Saving Figures
         print("Time: ", full_Domain.large.t)
-        if (full_Domain.large.n % 10 == 0):
+        if (full_Domain.large.n % 20 == 0): # Determine frequency of Output Plots
             animate.save_single_plot(2, [full_Domain.large.position, [position + full_Domain.large.L for position in full_Domain.small.position]],
                                      [full_Domain.large.a, full_Domain.small.a],
                                      "Acceleration", "Domain Position (m)", "Acceleration (m/s^2)",
@@ -131,5 +145,14 @@ def proposedCoupling(bar):
                                      ["Large", "Small"])
     animate.save_MTS_gifs("Proposed")
 
+    # Write History to CSV
+    hst_L.write_to_csv("Proposed_Large")
+    hst_S.write_to_csv("Proposed_Small")
+    # print maximum strain
+    print("Max Strain Large: ", np.max(hst_L.strain))
+    print("Max Strain Small: ", np.max(hst_S.strain))
+    # print minimum strain
+    print("Min Strain Large: ", np.min(hst_L.strain))
+    print("Min Strain Small: ", np.min(hst_S.strain))
 
     
