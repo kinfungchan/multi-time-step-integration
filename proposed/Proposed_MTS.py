@@ -88,18 +88,18 @@ class Proposed_MTS:
         self.f_int_Gamma = self.large.f_int[-1] + self.small.f_int[0]  
 
 def proposedCoupling(bar):
-    propTime = 1.75 * bar.length_L * np.sqrt(bar.rho_L / bar.E_L) 
+    propTime = 1.75 * bar.length_L * np.sqrt(bar.rho_S / bar.E_S) 
     # def vel(t): return vbc.velbcSquare(t, 2 * bar.length_L , bar.E_L, bar.rho_L)
-    pulse_duration = 0.25 * propTime
+    pulse_duration = 0.5 * propTime
     sigma = pulse_duration / 6  
-    def vel(t): return vbc.velbcGaussWP(t, bar.length_L, bar.E_L, bar.rho_L, sigma)
+    def vel(t): return vbc.velbcGaussWP(t, 2 * bar.length_L, bar.E_S, bar.rho_S, sigma)
     accelBCs_L = abc(list(),list())
     accelBCs_s = abc(list(),list())
 
     Domain_L = SimpleIntegrator("updated", bar.E_L, bar.rho_L, bar.length_L, 1, 
-                                       bar.num_elem_L, propTime, None, accelBCs_L, bar.safety_Param)
+                                       bar.num_elem_L, propTime, None, accelBCs_L, 0.1) # does not run on 0.5
     Domain_S = SimpleIntegrator("updated", bar.E_S, bar.rho_S, bar.length_S, 1, 
-                                       bar.num_elem_S, propTime, vbc([-1], [vel]), accelBCs_s, bar.safety_Param)
+                                       bar.num_elem_S, propTime, vbc([-1], [vel]), accelBCs_s, 0.5)
     full_Domain = Proposed_MTS(Domain_L, Domain_S)
 
     # Intialise History
@@ -111,7 +111,7 @@ def proposedCoupling(bar):
     animate = Animation(plot)
 
     # Solve Loop
-    while(full_Domain.large.t <= 0.0016):
+    while(full_Domain.large.t <= 2 * propTime):
         full_Domain.integrate()
 
         # History Data
@@ -125,11 +125,11 @@ def proposedCoupling(bar):
 
         # Plotting and Saving Figures
         print("Time: ", full_Domain.large.t)
-        if (full_Domain.large.n % 20 == 0): # Determine frequency of Output Plots
+        if (full_Domain.large.n % 80 == 0): # Determine frequency of Output Plots
             animate.save_single_plot(2, [full_Domain.large.position, [position + full_Domain.large.L for position in full_Domain.small.position]],
                                      [full_Domain.large.a, full_Domain.small.a],
                                      "Acceleration", "Domain Position (m)", "Acceleration (m/s^2)",
-                                     [None, None], [-0.01, 0.01],
+                                     [None, None], [None, None],
                                      animate.filenames_accel, full_Domain.large.n,
                                      ["Large", "Small"])
             animate.save_single_plot(2, [full_Domain.large.position, [position + full_Domain.large.L for position in full_Domain.small.position]],
@@ -141,13 +141,13 @@ def proposedCoupling(bar):
             animate.save_single_plot(2, [full_Domain.large.position, [position + full_Domain.large.L for position in full_Domain.small.position]],
                                      [full_Domain.large.u, full_Domain.small.u],
                                      "Displacement", "Domain Position (m)", "Displacement (m)",
-                                     [None, None], [-0.01, 0.01],
+                                     [None, None], [None, None],
                                      animate.filenames_disp, full_Domain.large.n,
                                      ["Large", "Small"])
             animate.save_single_plot(2, [full_Domain.large.midposition, [position + full_Domain.large.L for position in full_Domain.small.midposition]],
                                      [full_Domain.large.stress, full_Domain.small.stress],
                                      "Stress", "Domain Position (m)", "Stress (Pa)",
-                                     [None, None], [-0.01, 0.01],
+                                     [None, None], [None, None],
                                      animate.filenames_stress, full_Domain.large.n,
                                      ["Large", "Small"])
     animate.save_MTS_gifs("Proposed")

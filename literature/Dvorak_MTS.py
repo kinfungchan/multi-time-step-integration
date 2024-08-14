@@ -249,18 +249,21 @@ class Dvo_MTS:
         self.min_dt = min(self.min_dt, self.dt_f, self.Large.dt)
 
 def DvorakCoupling(bar):
-    def vel(t): return vbc.velbcSquare(t, 2 * bar.length_L, bar.E_L, bar.rho_L)
-    velboundaryConditions = vbc(list([0]), list([vel]))
+    propTime = 1.75 * bar.length_L * np.sqrt(bar.rho_S / bar.E_S) 
+    pulse_duration = 0.5 * propTime
+    sigma = pulse_duration / 6  
+    def vel(t): return vbc.velbcGaussWP(t, 2 * bar.length_L, bar.E_S, bar.rho_S, sigma)
+    velboundaryConditions = vbc(list([-1]), list([vel]))
 
     # Large Domain
     Domain_L = Domain('Large', bar.E_L, bar.rho_L, bar.length_L, bar.area_L, 
-                       bar.num_elem_L, bar.safety_Param, velboundaryConditions)
+                       bar.num_elem_L, 0.5, None) #change to 0.5 and pray it works
     Domain_L.compute_mass_matrix()
     Domain_L.compute_stiffness_matrix()
 
     # Small Domain
     Domain_S = Domain('Small', bar.E_S, bar.rho_L, bar.length_S, bar.area_L, 
-                       bar.num_elem_S, bar.safety_Param, None)
+                       bar.num_elem_S, 0.5, velboundaryConditions)
     Domain_S.compute_mass_matrix()
     Domain_S.compute_stiffness_matrix()
 
@@ -275,10 +278,10 @@ def DvorakCoupling(bar):
     pos_S = full_Domain.Small.position + full_Domain.Large.L
 
     # Integrate over time
-    while Domain_L.t < 0.0016:
+    while Domain_L.t < 2 * propTime:
         full_Domain.Dvorak_multistep()
         print("Time: ", Domain_L.t)
-        if Domain_L.n % 10 == 0: 
+        if Domain_L.n % 80 == 0: 
             animate.save_single_plot(2, [full_Domain.Large.position, [position + full_Domain.Large.L for position in full_Domain.Small.position]],
                                      [full_Domain.Large.a, full_Domain.Small.a],
                                      "Acceleration", "Domain Position (m)", "Acceleration (m/s^2)",

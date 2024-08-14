@@ -33,13 +33,14 @@ class VelBoundaryConditions:
         else:
             return 0.01
         
-    def velbcGaussWP(t, L, E, rho, sigma, n_peaks=10):
-        sinePeriod = (L / 2) * np.sqrt(rho/E)
+    def velbcGaussWP(t, L, E, rho, sigma, n_peaks=6):
+        sinePeriod = (L / 2) * np.sqrt(rho/E) # T
         # freq = 1 / sinePeriod
 
         mu = sinePeriod / 2  # Centre of the Gaussian
         A = 0.01  # amplitude
-        oscillation = np.cos(2 * np.pi * n_peaks * (t - mu) / sinePeriod)
+        freq_osc = n_peaks / sinePeriod
+        oscillation = np.cos(2 * np.pi * freq_osc * (t - mu))
         gaussian_pulse = A * np.exp(-(t - mu)**2 / (2 * sigma**2)) * oscillation
 
         if t >= mu + 3 * sigma: # 3 sigma is the approximate width of the Gaussian
