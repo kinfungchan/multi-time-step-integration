@@ -89,7 +89,10 @@ class Proposed_MTS:
 
 def proposedCoupling(bar):
     propTime = 1.75 * bar.length_L * np.sqrt(bar.rho_L / bar.E_L) 
-    def vel(t): return vbc.velbcSquare(t, 2 * bar.length_L , bar.E_L, bar.rho_L)
+    # def vel(t): return vbc.velbcSquare(t, 2 * bar.length_L , bar.E_L, bar.rho_L)
+    pulse_duration = 0.25 * propTime
+    sigma = pulse_duration / 6  
+    def vel(t): return vbc.velbcGaussWP(t, bar.length_L, bar.E_L, bar.rho_L, sigma)
     accelBCs_L = abc(list(),list())
     accelBCs_s = abc(list(),list())
 
