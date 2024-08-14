@@ -226,21 +226,25 @@ def ChoCoupling(bar):
             animate.save_single_plot(2, [full_Domain.Large.position, [position + full_Domain.Large.L for position in full_Domain.Small.position]],
                                      [full_Domain.Large.a, full_Domain.Small.a],
                                      "Acceleration", "Domain Position (m)", "Acceleration (m/s^2)",
+                                     [None, None], [None, None],
                                      animate.filenames_accel, full_Domain.Large.n,
                                      ["Large", "Small"])
             animate.save_single_plot(2, [full_Domain.Large.position, [position + full_Domain.Large.L for position in full_Domain.Small.position]],
                                      [full_Domain.Large.v, full_Domain.Small.v],
                                      "Velocity", "Domain Position (m)", "Velocity (m/s)",
+                                     [None, None], [None, None],
                                      animate.filenames_vel, full_Domain.Large.n,
                                      ["Large", "Small"])
             animate.save_single_plot(2, [full_Domain.Large.position, [position + full_Domain.Large.L for position in full_Domain.Small.position]],
                                      [full_Domain.Large.u, full_Domain.Small.u],
                                      "Displacement", "Domain Position (m)", "Displacement (m)",
+                                     [None, None], [None, None],
                                      animate.filenames_disp, full_Domain.Large.n,
                                      ["Large", "Small"])
             animate.save_single_plot(2, [full_Domain.Large.midposition, [position + full_Domain.Large.L for position in full_Domain.Small.midposition]],
                                      [full_Domain.Large.stress, full_Domain.Small.stress],
                                      "Stress", "Domain Position (m)", "Stress (Pa)",
+                                     [None, None], [None, None],
                                      animate.filenames_stress, full_Domain.Large.n,
                                      ["Large", "Small"])
 

@@ -181,21 +181,25 @@ def proposedCouplingStability(bar, vel_csv, stability_plots):
             animate.save_single_plot(2, [upd_fullDomain.large.position, [position + upd_fullDomain.large.L for position in upd_fullDomain.small.position]],
                                      [upd_fullDomain.large.a, upd_fullDomain.small.a],
                                      "Acceleration", "Domain Position (m)", "Acceleration (m/s^2)",
+                                     [None, None], [None, None],
                                      animate.filenames_accel, upd_fullDomain.large.n,
                                      ["Large", "Small"])
             animate.save_single_plot(2, [upd_fullDomain.large.position, [position + upd_fullDomain.large.L for position in upd_fullDomain.small.position]],
                                      [upd_fullDomain.large.v, upd_fullDomain.small.v],
                                      "Velocity", "Domain Position (m)", "Velocity (m/s)",
+                                     [None, None], [None, None],
                                      animate.filenames_vel, upd_fullDomain.large.n,
                                      ["Large", "Small"])
             animate.save_single_plot(2, [upd_fullDomain.large.position, [position + upd_fullDomain.large.L for position in upd_fullDomain.small.position]],
                                      [upd_fullDomain.large.u, upd_fullDomain.small.u],
                                      "Displacement", "Domain Position (m)", "Displacement (m)",
+                                     [None, None], [None, None],
                                      animate.filenames_disp, upd_fullDomain.large.n,
                                      ["Large", "Small"])
             animate.save_single_plot(2, [upd_fullDomain.large.midposition, [position + upd_fullDomain.large.L for position in upd_fullDomain.small.midposition]],
                                      [upd_fullDomain.large.stress, upd_fullDomain.small.stress],
                                      "Stress", "Domain Position (m)", "Stress (Pa)",
+                                     [None, None], [None, None],
                                      animate.filenames_stress, upd_fullDomain.large.n,
                                      ["Large", "Small"])
 

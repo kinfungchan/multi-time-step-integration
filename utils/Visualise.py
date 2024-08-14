@@ -52,10 +52,10 @@ class Animation:
         self.filenames_stress = []
         self.filenames_bv = []
      
-    def save_single_plot(self, n_plots, x, y, title, xlabel, ylabel, filenames, n, t):
+    def save_single_plot(self, n_plots, x, y, title, xlabel, ylabel, xlim, ylim, filenames, n, t):
         filenames.append(f'FEM1D_{title}{n}.png')
         self.P.plot(n_plots, x, y, title, xlabel, ylabel,
-                    t, [None, None], [None, None], False)
+                    t, xlim, ylim, False)
         plt.savefig(f'FEM1D_{title}{n}.png')
         plt.close()
             
