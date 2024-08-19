@@ -165,15 +165,24 @@ class SimpleIntegrator:
         self.f_int.fill(0)
 
 def monolithic():
-    n_elem = 300
-    E = 0.02 * 10**9 # 0.02GPa
-    rho = 8000
-    L = 50 * 10**-3 # 50mm
-    propTime = 0.5 * L * np.sqrt(rho / E)
-    def vel(t): return vbc.velbcSquare(t, L , E, rho)
+    n_elem = 600
+    rho_L = 8000
+    E_L = 0.02 * 10**9  # 0.02 GPa
+    rho_s = 8000
+    E_s = 200.0 * 10**9  # 200.0 GPa
+    L = 100 * 10**-3 # 100mm
+    # Initialise with default material properties
+    young = np.full(n_elem, E_L)
+    density = np.full(n_elem, rho_L)
+    # Overwrite last 150 elements with E_s
+    young[-300:] = E_s
+    density[-300:] = rho_s
+
+    propTime = 0.5 * L * np.sqrt(rho_L / E_L)
+    def vel(t): return vbc.velbcSquare(t, L , E_L, rho_L)
     velboundaryConditions = vbc(list([0]), list([vel]))
     tot_formulation = "total"
-    tot_bar = SimpleIntegrator(tot_formulation, E, rho, L, 1, n_elem, 4*propTime, velboundaryConditions, None, Co=0.5)
+    tot_bar = SimpleIntegrator(tot_formulation, young, density, L, 1, n_elem, 4*propTime, velboundaryConditions, None, Co=0.5)
 
     # Intialise History
     hst = History(tot_bar.position, tot_bar.n_nodes, tot_bar.n_elem) 
@@ -182,7 +191,7 @@ def monolithic():
     plot = Plot()
     animate = Animation(plot)
 
-    while tot_bar.t <= tot_bar.tfinal:
+    while tot_bar.t <= 0.0016:
         tot_bar.assemble_internal()
         tot_bar.single_tstep_integrate()
 
@@ -192,7 +201,7 @@ def monolithic():
         #                     tot_bar.stress, tot_bar.strain)
 
         # Plotting and Saving Figures
-        if (tot_bar.n % 80 == 0): # Determine frequency of Output Plots
+        if (tot_bar.n % 800 == 0): # Determine frequency of Output Plots
             print("Time: ", tot_bar.t)
             animate.save_single_plot(1, [tot_bar.position],
                                      [tot_bar.a],
@@ -203,7 +212,7 @@ def monolithic():
             animate.save_single_plot(1, [tot_bar.position],
                                      [tot_bar.v],
                                      "Velocity", "Domain Position (m)", "Velocity (m/s)",
-                                     [None, None], [-0.0075, 0.012],
+                                     [None, None], [-0.015, 0.015],
                                      animate.filenames_vel, tot_bar.n,
                                      ["Large"])
             animate.save_single_plot(1, [tot_bar.position],

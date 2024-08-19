@@ -88,14 +88,23 @@ class Proposed_MTS:
         self.f_int_Gamma = self.large.f_int[-1] + self.small.f_int[0]  
 
 def proposedCoupling(bar):
-    propTime = 1.75 * bar.length_L * np.sqrt(bar.rho_L / bar.E_L) 
+    propTime = 1 * bar.length_L * np.sqrt(bar.rho_L / bar.E_L) 
     def vel(t): return vbc.velbcSquare(t, 2 * bar.length_L , bar.E_L, bar.rho_L)
     accelBCs_L = abc(list(),list())
     accelBCs_s = abc(list(),list())
 
-    Domain_L = SimpleIntegrator("total", bar.E_L, bar.rho_L, bar.length_L, 1, 
+    # Initialise with default material properties
+    young_L = np.full(bar.num_elem_L, bar.E_L)
+    density_L = np.full(bar.num_elem_L, bar.rho_L)
+    young_S = np.full(bar.num_elem_S, bar.E_S)
+    density_S = np.full(bar.num_elem_S, bar.rho_S)
+    # Overwrite first element in S with E_L and rho_L
+    young_S[0] = bar.E_L
+    density_S[0] = bar.rho_L
+
+    Domain_L = SimpleIntegrator("total",young_L, density_L, bar.length_L, 1, 
                                        bar.num_elem_L, propTime, vbc([0], [vel]), accelBCs_L, 0.5)
-    Domain_S = SimpleIntegrator("total", bar.E_S, bar.rho_S, bar.length_S, 1, 
+    Domain_S = SimpleIntegrator("total", young_S, density_S, bar.length_S, 1, 
                                        bar.num_elem_S, propTime, None, accelBCs_s, 0.5)
     full_Domain = Proposed_MTS(Domain_L, Domain_S)
 
@@ -112,16 +121,16 @@ def proposedCoupling(bar):
         full_Domain.integrate()
         
         # History Data
-        hst_L.append_timestep(full_Domain.large.t, full_Domain.large.position,
-                            full_Domain.large.a, full_Domain.large.v, full_Domain.large.u, 
-                            full_Domain.large.stress, full_Domain.large.strain)
-        hst_S.append_timestep(full_Domain.small.t, full_Domain.small.position,
-                            full_Domain.small.a, full_Domain.small.v, full_Domain.small.u, 
-                            full_Domain.small.stress, full_Domain.small.strain)
+        # hst_L.append_timestep(full_Domain.large.t, full_Domain.large.position,
+        #                     full_Domain.large.a, full_Domain.large.v, full_Domain.large.u, 
+        #                     full_Domain.large.stress, full_Domain.large.strain)
+        # hst_S.append_timestep(full_Domain.small.t, full_Domain.small.position,
+        #                     full_Domain.small.a, full_Domain.small.v, full_Domain.small.u, 
+        #                     full_Domain.small.stress, full_Domain.small.strain)
 
         # Plotting and Saving Figures
         print("Time: ", full_Domain.large.t)
-        if (full_Domain.large.n % 10 == 0): # Determine frequency of Output Plots
+        if (full_Domain.large.n % 80 == 0): # Determine frequency of Output Plots
             animate.save_single_plot(2, [full_Domain.large.position, [position + full_Domain.large.L for position in full_Domain.small.position]],
                                      [full_Domain.large.a, full_Domain.small.a],
                                      "Acceleration", "Domain Position (m)", "Acceleration (m/s^2)",
@@ -131,7 +140,7 @@ def proposedCoupling(bar):
             animate.save_single_plot(2, [full_Domain.large.position, [position + full_Domain.large.L for position in full_Domain.small.position]],
                                      [full_Domain.large.v, full_Domain.small.v],
                                      "Velocity", "Domain Position (m)", "Velocity (m/s)",
-                                     [None, None], [-0.0075, 0.012],
+                                     [None, None], [-0.015, 0.015],
                                      animate.filenames_vel, full_Domain.large.n,
                                      ["Large", "Small"])
             animate.save_single_plot(2, [full_Domain.large.position, [position + full_Domain.large.L for position in full_Domain.small.position]],
@@ -149,7 +158,7 @@ def proposedCoupling(bar):
     animate.save_MTS_gifs("Proposed")
 
     # Write History to CSV
-    hst_L.write_to_csv("Proposed_Large_High_m")
-    hst_S.write_to_csv("Proposed_Small_High_m")
+    # hst_L.write_to_csv("Proposed_Large_High_m")
+    # hst_S.write_to_csv("Proposed_Small_High_m")
 
     
