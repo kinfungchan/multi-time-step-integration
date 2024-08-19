@@ -63,5 +63,7 @@ def main(bar):
     print(f"\nThe {method_name} has finished running.\n")
 
 if __name__ == "__main__":
-    bar = Bar_1D()
-    main(bar)
+    # bar = Bar_1D()
+    # main(bar)
+
+    proposed.monolithic()
