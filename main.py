@@ -66,5 +66,5 @@ if __name__ == "__main__":
     bar = Bar_1D()
     # main(bar)
 
-    # proposed.monolithic()
-    proposed.proposedCoupling(bar)
+    proposed.monolithic()
+    # proposed.proposedCoupling(bar)

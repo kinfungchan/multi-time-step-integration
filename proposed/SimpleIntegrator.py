@@ -165,21 +165,21 @@ class SimpleIntegrator:
         self.f_int.fill(0)
 
 def monolithic():
-    n_elem = 600
+    n_elem = 900
     rho_L = 8000
     E_L = 0.02 * 10**9  # 0.02 GPa
     rho_s = 8000
     E_s = 200.0 * 10**9  # 200.0 GPa
-    L = 100 * 10**-3 # 100mm
+    L = 150 * 10**-3 # 100mm
     # Initialise with default material properties
     young = np.full(n_elem, E_L)
     density = np.full(n_elem, rho_L)
     # Overwrite last 150 elements with E_s
-    young[-300:] = E_s
-    density[-300:] = rho_s
+    young[-600:] = E_s
+    density[-600:] = rho_s
 
     propTime = 0.5 * L * np.sqrt(rho_L / E_L)
-    def vel(t): return vbc.velbcSquare(t, L , E_L, rho_L)
+    def vel(t): return vbc.velbcSquare(t, (2/3 * L) , E_L, rho_L)
     velboundaryConditions = vbc(list([0]), list([vel]))
     tot_formulation = "total"
     tot_bar = SimpleIntegrator(tot_formulation, young, density, L, 1, n_elem, 4*propTime, velboundaryConditions, None, Co=0.5)
