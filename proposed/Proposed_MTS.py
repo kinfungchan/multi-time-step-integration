@@ -94,9 +94,9 @@ def proposedCoupling(bar):
     accelBCs_s = abc(list(),list())
 
     Domain_L = SimpleIntegrator("total", bar.E_L, bar.rho_L, bar.length_L, 1, 
-                                       bar.num_elem_L, propTime, vbc([0], [vel]), accelBCs_L, 0.1)
+                                       bar.num_elem_L, propTime, vbc([0], [vel]), accelBCs_L, 0.5)
     Domain_S = SimpleIntegrator("total", bar.E_S, bar.rho_S, bar.length_S, 1, 
-                                       bar.num_elem_S, propTime, None, accelBCs_s, 0.005)
+                                       bar.num_elem_S, propTime, None, accelBCs_s, 0.5)
     full_Domain = Proposed_MTS(Domain_L, Domain_S)
 
     # Intialise History

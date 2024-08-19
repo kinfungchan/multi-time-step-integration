@@ -20,7 +20,7 @@ class SubdomainEnergy:
     def calc_IE_subdomain(self, n_elem, stress, E, dx):
         IE = 0.0
         for j in range(n_elem):
-            IE += ((0.5 * stress[j]**2) / E) * dx
+            IE += ((0.5 * stress[j]**2) / E[j]) * dx
         self.IE = np.append(self.IE, IE)
 
     def calc_BV_subdomain(self, n_elem, stress, E, dx):

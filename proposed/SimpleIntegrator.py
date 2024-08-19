@@ -47,8 +47,15 @@ class SimpleIntegrator:
 
     def __init__(self, formulation, young, density, length, A, num_elems, tfinal, v_bc: vbc, a_bc: abc, Co):
         self.formulation = formulation
-        self.E = young
-        # self.rho = density
+        # Each element has its own Young´s Modulus and Density
+        if isinstance(young, (list, np.ndarray)):
+            self.E = np.array(young)
+        else:
+            self.E = np.full(num_elems, young)        
+        if isinstance(density, (list, np.ndarray)):
+            self.rho = np.array(density)
+        else:
+            self.rho = np.full(num_elems, density)
         self.L = length
         self.n_elem = num_elems
         self.tfinal = tfinal
@@ -63,18 +70,16 @@ class SimpleIntegrator:
         self.a = np.zeros(self.n_nodes)
         self.v = np.zeros(self.n_nodes)
         self.u = np.zeros(self.n_nodes)
-        self.rho = np.ones(self.n_elem) * density
         self.stress = np.zeros(self.n_elem)
         self.strain = np.zeros(self.n_elem)
         self.bulk_viscosity_stress = np.zeros(self.n_elem)
         self.f_int = np.zeros(self.n_nodes)
-        self.dt = Co * self.dx * np.sqrt(min(self.rho) / self.E)
+        self.dt = Co * min(self.dx * np.sqrt(self.rho / self.E))
         self.dt_0 = self.dt
         self.dt_min_fac = 0.01
-        nodalMass = 0.5 * min(self.rho) * self.dx
+        nodalMass = 0.5 * np.concatenate(([self.rho[0]], self.rho[:-1] + self.rho[1:], [self.rho[-1]])) * self.dx
         self.mass = np.ones(self.n_nodes) * nodalMass
-        self.mass[1:-1] *= 2
-        self.elMass = np.ones(self.n_elem) * 2 * nodalMass
+        self.elMass = self.mass[:-1] + self.mass[1:]
         self.kinetic_energy = []
         self.internal_energy = []
         self.tot_energy = []
@@ -105,7 +110,7 @@ class SimpleIntegrator:
             if ((self.Co * min(tempdx) * np.sqrt(min(self.rho) / self.E)) < self.dt_min_fac * self.dt_0):
                 self.dt = self.dt_min_fac * self.dt_0
             else:
-                self.dt = self.Co * min(tempdx) * np.sqrt(min(self.rho) / self.E) 
+                self.dt = self.Co * min(tempdx * np.sqrt(self.rho / self.E))  
             self.strain = (np.diff(self.u) / self.dx) 
             self.stress = self.strain * self.E
 
