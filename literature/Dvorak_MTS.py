@@ -1,6 +1,7 @@
 import numpy as np
 from literature.singleDomain import Domain
 from boundaryConditions.BoundaryConditions import  VelBoundaryConditions as vbc
+from database import History
 from utils.Visualise import Plot, Animation
 from utils.Paper import Outputs
 
@@ -257,7 +258,7 @@ def DvorakCoupling(bar):
 
     # Large Domain
     Domain_L = Domain('Large', bar.E_L, bar.rho_L, bar.length_L, bar.area_L, 
-                       bar.num_elem_L, 0.5, None) #change to 0.5 and pray it works
+                       bar.num_elem_L, 0.5, None) 
     Domain_L.compute_mass_matrix()
     Domain_L.compute_stiffness_matrix()
 
@@ -269,6 +270,11 @@ def DvorakCoupling(bar):
 
     # Multistep Combined Domains
     full_Domain = Dvo_MTS(Domain_L, Domain_S, 3)
+
+    # Initialise History
+    hst_L = History(Domain_L.position, Domain_L.n_nodes, Domain_L.n_elems)
+    hst_S = History(Domain_S.position, Domain_S.n_nodes, Domain_S.n_elems)
+
     # Visualisation
     plot = Plot()
     animate = Animation(plot)
@@ -281,6 +287,11 @@ def DvorakCoupling(bar):
     while Domain_L.t < 2 * propTime:
         full_Domain.Dvorak_multistep()
         print("Time: ", Domain_L.t)
+
+        # History Data
+        hst_L.append_timestep(Domain_L.t, Domain_L.position, Domain_L.a, Domain_L.v, Domain_L.u, Domain_L.stress, Domain_L.strain)
+        hst_S.append_timestep(Domain_S.t, Domain_S.position, Domain_S.a, Domain_S.v, Domain_S.u, Domain_S.stress, Domain_S.strain)
+
         if Domain_L.n % 80 == 0: 
             animate.save_single_plot(2, [full_Domain.Large.position, [position + full_Domain.Large.L for position in full_Domain.Small.position]],
                                      [full_Domain.Large.a, full_Domain.Small.a],
@@ -329,6 +340,10 @@ def DvorakCoupling(bar):
     print("Minimum Time Step for Whole Domain: ", full_Domain.min_dt)
     # Print Total Number of Integration Steps
     print("Number of Integration Steps: ", full_Domain.el_steps)
+
+    # Write History to CSV
+    hst_L.write_to_csv("Dvorak_Large_gwp")
+    hst_S.write_to_csv("Dvorak_Small_gwp")
 
     # Paper Outputs
     outputs = Outputs(domains, steps, sq_L, sq_S, pos_L, pos_S)
