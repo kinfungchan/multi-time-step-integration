@@ -166,23 +166,22 @@ class SimpleIntegrator:
 
 def monolithic():
     n_elem = 900
-    rho_L = 8000
+    rho = 8000
     E_L = 0.02 * 10**9  # 0.02 GPa
-    rho_s = 8000
-    E_s = 200.0 * 10**9  # 200.0 GPa
+    # E_s = 200.0 * 10**9  # 200.0 GPa
+    E_s = (np.pi/0.02)**2 * rho # Non Integer Time Step Ratio = pi
     L = 150 * 10**-3 # 100mm
     # Initialise with default material properties
     young = np.full(n_elem, E_L)
-    density = np.full(n_elem, rho_L)
-    # Overwrite last 150 elements with E_s
+    density = np.full(n_elem, rho)
+    # Overwrite last 150 elements with E_s for High Heterogeneity
     young[-600:] = E_s
-    density[-600:] = rho_s
 
-    propTime = 0.5 * L * np.sqrt(rho_L / E_L)
-    def vel(t): return vbc.velbcSquare(t, (2/3 * L) , E_L, rho_L)
+    propTime = 0.5 * L * np.sqrt(rho / E_L)
+    def vel(t): return vbc.velbcSquare(t, 2 * (L / 3) , E_L, rho)
     velboundaryConditions = vbc(list([0]), list([vel]))
     tot_formulation = "total"
-    tot_bar = SimpleIntegrator(tot_formulation, young, density, L, 1, n_elem, 4*propTime, velboundaryConditions, None, Co=0.5)
+    tot_bar = SimpleIntegrator(tot_formulation, young, density, L, 1, n_elem, propTime, velboundaryConditions, None, Co=0.9)
 
     # Intialise History
     hst = History(tot_bar.position, tot_bar.n_nodes, tot_bar.n_elem) 
@@ -196,41 +195,41 @@ def monolithic():
         tot_bar.single_tstep_integrate()
 
         # History Data
-        # hst.append_timestep(tot_bar.t, tot_bar.position,
-        #                     tot_bar.a, tot_bar.v, tot_bar.u, 
-        #                     tot_bar.stress, tot_bar.strain)
+        hst.append_timestep(tot_bar.t, tot_bar.position,
+                            tot_bar.a, tot_bar.v, tot_bar.u, 
+                            tot_bar.stress, tot_bar.strain)
 
         # Plotting and Saving Figures
-        if (tot_bar.n % 800 == 0): # Determine frequency of Output Plots
+        if (tot_bar.n % 400 == 0): # Determine frequency of Output Plots
             print("Time: ", tot_bar.t)
             animate.save_single_plot(1, [tot_bar.position],
                                      [tot_bar.a],
                                      "Acceleration", "Domain Position (m)", "Acceleration (m/s^2)",
                                      [None, None], [None, None],
                                      animate.filenames_accel, tot_bar.n,
-                                     ["Large"])
+                                     ["Mono"])
             animate.save_single_plot(1, [tot_bar.position],
                                      [tot_bar.v],
                                      "Velocity", "Domain Position (m)", "Velocity (m/s)",
                                      [None, None], [-0.015, 0.015],
                                      animate.filenames_vel, tot_bar.n,
-                                     ["Large"])
+                                     ["Mono"])
             animate.save_single_plot(1, [tot_bar.position],
                                      [tot_bar.u],
                                      "Displacement", "Domain Position (m)", "Displacement (m)",
                                      [None, None], [None, None],
                                      animate.filenames_disp, tot_bar.n,
-                                     ["Large"])
+                                     ["Mono"])
             animate.save_single_plot(1, [tot_bar.midposition],
                                      [tot_bar.stress],
                                      "Stress", "Domain Position (m)", "Stress (Pa)",
                                      [None, None], [None, None],
                                      animate.filenames_stress, tot_bar.n,
-                                     ["Large"])
+                                     ["Mono"])
     animate.save_MTS_gifs("Monolithic")
 
     # Write History to CSV
-    # hst.write_to_csv("Monolithic_Large_High_m")
+    hst.write_to_csv("Mono_Co_0_9")
 
 
 
