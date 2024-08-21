@@ -1,7 +1,8 @@
 import numpy as np
 from literature.singleDomain import Domain
-from utils.Visualise import Plot, Animation
 from boundaryConditions.BoundaryConditions import VelBoundaryConditions as vbc
+from database import History
+from utils.Visualise import Plot, Animation
 from utils.Paper import Outputs
 
 """
@@ -210,6 +211,11 @@ def ChoCoupling(bar):
     m_int = np.ceil(Domain_L.dt / Domain_S.dt)
     Domain_S.dt = Domain_L.dt / m_int
     full_Domain = Cho_MTS(Domain_L, Domain_S, m_int)
+
+    # Intialise History
+    hst_L = History(Domain_L.position, Domain_L.n_nodes, Domain_L.n_elems)
+    hst_S = History(Domain_S.position, Domain_S.n_nodes, Domain_S.n_elems)    
+
     # Visualisation
     plot = Plot()
     animate = Animation(plot)
@@ -219,10 +225,15 @@ def ChoCoupling(bar):
     pos_S = full_Domain.Small.position + full_Domain.Large.L
 
     # Integrate over time
-    while Domain_L.t < 0.0016:
+    while Domain_L.t <= 0.0019:
         full_Domain.Cho_multistep()
+
+        # History Data
+        hst_L.append_timestep(Domain_L.t, Domain_L.position, Domain_L.a, Domain_L.v, Domain_L.u, Domain_L.stress, Domain_L.strain)
+        hst_S.append_timestep(Domain_S.t, Domain_S.position, Domain_S.a, Domain_S.v, Domain_S.u, Domain_S.stress, Domain_S.strain)
+
         print("Time: ", Domain_L.t)
-        if Domain_L.n % 10 == 0: 
+        if Domain_L.n % 200 == 0: 
             animate.save_single_plot(2, [full_Domain.Large.position, [position + full_Domain.Large.L for position in full_Domain.Small.position]],
                                      [full_Domain.Large.a, full_Domain.Small.a],
                                      "Acceleration", "Domain Position (m)", "Acceleration (m/s^2)",
@@ -267,6 +278,10 @@ def ChoCoupling(bar):
     print("Minimum Time Step for Whole Domain: ", full_Domain.min_dt)
     # Print Total Number of Integration Steps 
     print("Number of Integration Steps: ", full_Domain.el_steps)
+
+    # Write History to CSV
+    hst_L.write_to_csv("Cho_Large_HighHet")
+    hst_S.write_to_csv("Cho_Small_HighHet")
 
     outputs = Outputs(domains, steps, sq_L, sq_S, pos_L, pos_S)
     return outputs

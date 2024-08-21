@@ -117,7 +117,7 @@ def proposedCoupling(bar):
     animate = Animation(plot)
 
     # Solve Loop
-    while(full_Domain.large.t <= 0.0016):
+    while(full_Domain.large.t <= 0.0019):
         full_Domain.integrate()
         
         # History Data

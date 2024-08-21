@@ -63,10 +63,12 @@ def main(bar):
     print(f"\nThe {method_name} has finished running.\n")
 
 if __name__ == "__main__":
-    bar = Bar_1D()
-    # bar = Bar_1D_HighHet()
+    # bar = Bar_1D()
+    bar = Bar_1D_HighHet()
     # bar = Bar_1D_GWP()
     # main(bar)
 
     proposed.monolithic()
-    # proposed.proposedCoupling(bar)
+    proposed.proposedCoupling(bar)
+    cho = literature.ChoCoupling(bar)
+    dvo = literature.DvorakCoupling(bar)

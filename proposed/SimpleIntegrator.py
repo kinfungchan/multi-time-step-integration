@@ -168,8 +168,8 @@ def monolithic():
     n_elem = 900
     rho = 8000
     E_L = 0.02 * 10**9  # 0.02 GPa
-    # E_s = 200.0 * 10**9  # 200.0 GPa
-    E_s = (np.pi/0.02)**2 * rho # Non Integer Time Step Ratio = pi
+    E_s = 200.0 * 10**9  # 200.0 GPa
+    # E_s = (np.pi/0.02)**2 * rho # Non Integer Time Step Ratio = pi
     L = 150 * 10**-3 # 100mm
     # Initialise with default material properties
     young = np.full(n_elem, E_L)
@@ -181,7 +181,7 @@ def monolithic():
     def vel(t): return vbc.velbcSquare(t, 2 * (L / 3) , E_L, rho)
     velboundaryConditions = vbc(list([0]), list([vel]))
     tot_formulation = "total"
-    tot_bar = SimpleIntegrator(tot_formulation, young, density, L, 1, n_elem, propTime, velboundaryConditions, None, Co=0.9)
+    tot_bar = SimpleIntegrator(tot_formulation, young, density, L, 1, n_elem, propTime, velboundaryConditions, None, Co=0.5)
 
     # Intialise History
     hst = History(tot_bar.position, tot_bar.n_nodes, tot_bar.n_elem) 
@@ -190,7 +190,7 @@ def monolithic():
     plot = Plot()
     animate = Animation(plot)
 
-    while tot_bar.t <= 0.0016:
+    while tot_bar.t <= 0.0019:
         tot_bar.assemble_internal()
         tot_bar.single_tstep_integrate()
 
@@ -229,7 +229,7 @@ def monolithic():
     animate.save_MTS_gifs("Monolithic")
 
     # Write History to CSV
-    hst.write_to_csv("Mono_Co_0_9")
+    hst.write_to_csv("Mono_HighHet")
 
 
 
