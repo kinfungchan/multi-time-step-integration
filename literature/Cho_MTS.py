@@ -233,7 +233,7 @@ def ChoCoupling(bar):
         hst_S.append_timestep(Domain_S.t, Domain_S.position, Domain_S.a, Domain_S.v, Domain_S.u, Domain_S.stress, Domain_S.strain)
 
         print("Time: ", Domain_L.t)
-        if Domain_L.n % 200 == 0: 
+        if Domain_L.n % 1000 == 0: 
             animate.save_single_plot(2, [full_Domain.Large.position, [position + full_Domain.Large.L for position in full_Domain.Small.position]],
                                      [full_Domain.Large.a, full_Domain.Small.a],
                                      "Acceleration", "Domain Position (m)", "Acceleration (m/s^2)",

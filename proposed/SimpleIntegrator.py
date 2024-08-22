@@ -200,7 +200,7 @@ def monolithic():
                             tot_bar.stress, tot_bar.strain)
 
         # Plotting and Saving Figures
-        if (tot_bar.n % 400 == 0): # Determine frequency of Output Plots
+        if (tot_bar.n % 1000 == 0): # Determine frequency of Output Plots
             print("Time: ", tot_bar.t)
             animate.save_single_plot(1, [tot_bar.position],
                                      [tot_bar.a],

@@ -3,7 +3,7 @@ import os
 import literature
 import proposed
 from utils import Paper
-from bar import Bar_1D, Bar_1D_HighHet, Bar_1D_GWP
+from bar import Bar_1D, Bar_1D_HighHet, Bar_1D_HighHetUnstable
 
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
@@ -64,11 +64,12 @@ def main(bar):
 
 if __name__ == "__main__":
     # bar = Bar_1D()
-    bar = Bar_1D_HighHet()
+    # bar = Bar_1D_HighHet()
+    # bar = Bar_1D_HighHetUnstable()
     # bar = Bar_1D_GWP()
     # main(bar)
 
     proposed.monolithic()
-    proposed.proposedCoupling(bar)
-    cho = literature.ChoCoupling(bar)
-    dvo = literature.DvorakCoupling(bar)
+    # proposed.proposedCoupling(bar)
+    # cho = literature.ChoCoupling(bar)
+    # dvo = literature.DvorakCoupling(bar)
