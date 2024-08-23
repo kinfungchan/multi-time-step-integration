@@ -250,21 +250,18 @@ class Dvo_MTS:
         self.min_dt = min(self.min_dt, self.dt_f, self.Large.dt)
 
 def DvorakCoupling(bar):
-    propTime = 1.75 * bar.length_L * np.sqrt(bar.rho_S / bar.E_S) 
-    pulse_duration = 0.5 * propTime
-    sigma = pulse_duration / 6  
-    def vel(t): return vbc.velbcGaussWP(t, 2 * bar.length_L, bar.E_S, bar.rho_S, sigma)
-    velboundaryConditions = vbc(list([-1]), list([vel]))
+    def vel(t): return vbc.velbcSquare(t, 2 * bar.length_L, bar.E_L, bar.rho_L)
+    velboundaryConditions = vbc(list([0]), list([vel]))
 
     # Large Domain
     Domain_L = Domain('Large', bar.E_L, bar.rho_L, bar.length_L, bar.area_L, 
-                       bar.num_elem_L, 0.5, None) 
+                       bar.num_elem_L, 0.5, velboundaryConditions) 
     Domain_L.compute_mass_matrix()
     Domain_L.compute_stiffness_matrix()
 
     # Small Domain
     Domain_S = Domain('Small', bar.E_S, bar.rho_L, bar.length_S, bar.area_L, 
-                       bar.num_elem_S, 0.5, velboundaryConditions)
+                       bar.num_elem_S, 0.5, None)
     Domain_S.compute_mass_matrix()
     Domain_S.compute_stiffness_matrix()
 
