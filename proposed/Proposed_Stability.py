@@ -31,6 +31,7 @@ class Proposed_MTS_stab:
         # Interface
         self.mass_Gamma = self.large.mass[-1] + self.small.mass[0]
         self.f_int_Gamma = self.large.f_int[-1] + self.small.f_int[0]
+        self.f_int_Gamma_prev = 0.0
         # Time step Ratio Computations
         self.large_tTrial = 0.0
         self.small_tTrial = 0.0
@@ -95,10 +96,10 @@ class Proposed_MTS_stab:
             lm_L_dts, lm_s_dts, f_int_L_dts = self.stability.f_int_L_equiv(self.large.mass[-1], self.small.mass[0],
                                                                             self.small.f_int[0], self.accelCoupling())
             # Check inconsistency in acceleration each small time step
-            eps = np.abs((lm_s_dts / self.small.mass[0]) + (self.accelCoupling()) + (self.small.f_int[0] / self.small.mass[0]))
+            eps = np.abs((self.stability.lm_s[-1] / self.small.mass[0]) - (self.accelCoupling()) + (self.small.f_int[0] / self.small.mass[0]))
+            # No difference over large time step
+            # eps = np.abs((self.stability.lm_L[-1] / self.large.mass[-1]) + (self.accelCoupling()) + (self.large.f_int[-1] / self.large.mass[-1]))
             self.stability.eps = np.append(self.stability.eps, eps) 
-            eps_diff = eps / self.accelCoupling() # eps / lambda
-            self.stability.eps_diff = np.append(self.stability.eps_diff, eps_diff)
             
             # Link Work Calculation
             if (k < 3):                
@@ -132,6 +133,7 @@ class Proposed_MTS_stab:
         self.large.assemble_internal()        
         self.calc_timestep_ratios()
 
+        self.f_int_Gamma_prev = self.f_int_Gamma
         self.f_int_Gamma = self.large.f_int[-1] + self.small.f_int[0]  
 
         self.stability.energy_L.calc_energy_balance_subdomain(self.large.n_nodes, self.large.n_elem, self.large.mass,
@@ -159,8 +161,8 @@ class Proposed_MTS_stab:
                                        self.small.u[0], self.stability.u_s_prev_dtL)
         self.stability.calc_dW_Gamma_dtL("Large", self.large.mass[-1], a_f, self.stability.a_f[-2], self.large.f_int[-1], self.large.f_int_prev[-1],
                                        self.large.u[-1], self.large.u_prev[-1])
-        self.stability.dW_Gamma_S_dtS = np.append(self.stability.dW_Gamma_S_dtS, dW_Gamma_dtS)
-        
+        self.stability.dW_Gamma_S_dtS = np.append(self.stability.dW_Gamma_S_dtS, dW_Gamma_dtS)        
+
         self.stability.f_int_s_prev_dtL = np.copy(self.small.f_int[0])
         self.stability.u_s_prev_dtL = np.copy(self.small.u[0])
 
@@ -181,7 +183,7 @@ def proposedCouplingStability(bar, vel_csv, stability_plots):
                                        bar.num_elem_L, propTime, vbc([0], [vel]), accelBCs_L, Co=bar.safety_Param)
     upd_smallDomain = SimpleIntegrator("total", young_S, density_S, bar.length_S, 1,
                                        bar.num_elem_S, propTime, None, accelBCs_s, Co=bar.safety_Param)
-
+    
     energy_L = SubdomainEnergy()
     energy_s = SubdomainEnergy()
     stability = Stability(energy_L, energy_s)    
