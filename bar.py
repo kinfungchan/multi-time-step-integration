@@ -13,7 +13,7 @@ class Bar_1D:
         self.area_L = 1 # 1m^2
         self.num_elem_L = 300
         # Small Domain
-        self.E_S = 200.0 * 10**9 # 200GPa High Heterogeneity
+        self.E_S = (np.pi/0.02)**2 * self.rho_L # Non Integer Time Step Ratio = pi
         self.rho_S = self.rho_L
         self.length_S = 2 * 50 * 10**-3 
         self.area_S = self.area_L

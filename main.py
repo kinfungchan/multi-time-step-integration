@@ -37,7 +37,8 @@ def main(bar):
         2: "Proposed Method with Stability",
         3: "Cho Method",
         4: "Dvorak Method",
-        5: "List of All Methods"
+        5: "List of All Methods",
+        6: "Monolithic Method"
     }[choice]
 
     print(f"\nRunning the {method_name}...\n")
@@ -55,6 +56,8 @@ def main(bar):
         prop = proposed.proposedCouplingStability(bar, False, True)
         cho = literature.ChoCoupling(bar)
         dvo = literature.DvorakCoupling(bar)
+    elif choice == 6:
+        proposed.monolithic()
 
         # Comparison of Methods Outputs
         paper = Paper(prop, cho, dvo)
@@ -66,10 +69,9 @@ if __name__ == "__main__":
     bar = Bar_1D()
     # bar = Bar_1D_HighHet()
     # bar = Bar_1D_HighHetUnstable()
-    # bar = Bar_1D_GWP()
-    # main(bar)
+    main(bar)
 
     # proposed.monolithic()
     # proposed.proposedCoupling(bar)
     # cho = literature.ChoCoupling(bar)
-    dvo = literature.DvorakCoupling(bar)
+    # dvo = literature.DvorakCoupling(bar)

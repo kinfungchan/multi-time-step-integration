@@ -80,6 +80,7 @@ class Proposed_MTS_stab:
         k = 0
         dW_Link_s = 0.0 
         dW_Link_L = 0.0
+        dW_Gamma_dtS = 0.0
 
         while (self.nextTimeStepRatio <= 1 or (self.currTimeStepRatio <= 1 and self.nextTimeStepRatio <= 1.000001)):
             # Integrate Small Domain
@@ -90,10 +91,21 @@ class Proposed_MTS_stab:
                                                                   self.small.E, self.small.dx)
 
             self.stability.t_small = np.append(self.stability.t_small, self.small.t)
-            if (k < 3):
-                lm_L_dts, lm_s_dts, f_int_L_dts = self.stability.f_int_L_equiv(self.large.mass[-1], self.small.mass[0],
+            # Stability Calculations over Small Time Step
+            lm_L_dts, lm_s_dts, f_int_L_dts = self.stability.f_int_L_equiv(self.large.mass[-1], self.small.mass[0],
                                                                             self.small.f_int[0], self.accelCoupling())
+            # Check inconsistency in acceleration each small time step
+            eps = np.abs((lm_s_dts / self.small.mass[0]) + (self.accelCoupling()) + (self.small.f_int[0] / self.small.mass[0]))
+            self.stability.eps = np.append(self.stability.eps, eps) 
+            eps_diff = eps / self.accelCoupling() # eps / lambda
+            self.stability.eps_diff = np.append(self.stability.eps_diff, eps_diff)
+            
+            # Link Work Calculation
+            if (k < 3):                
                 dW_Link_s += 0.5 * (self.small.u[0] - self.small.u_prev[0]) * (self.stability.lm_s_dts[-1] + self.stability.lm_s_dts[-2])
+                dW = self.stability.calc_dW_Gamma_dtS("Small", self.small.mass[0], self.small.a[0], self.small.a_prev[0], self.small.f_int[0], self.small.f_int_prev[0], 
+                                       self.small.u[0], self.small.u_prev[0], self.stability.lm_s_dts[-1], self.stability.lm_s_dts[-2])
+                dW_Gamma_dtS += dW
 
         # Compute Pullback Values
         self.alpha_L = 1 - ((self.large_tTrial - self.small.t)/(self.large_tTrial - self.large.t))
@@ -130,6 +142,9 @@ class Proposed_MTS_stab:
                                                                             self.small.f_int[0], self.accelCoupling())
         dW_Link_s += 0.5 * (self.small.u[0] - self.small.u_prev[0]) * (self.stability.lm_s_dts[-1] + self.stability.lm_s_dts[-2])
         self.stability.dW_Link_s = np.append(self.stability.dW_Link_s, dW_Link_s)
+        dW = self.stability.calc_dW_Gamma_dtS("Small", self.small.mass[0], self.small.a[0], self.small.a_prev[0], self.small.f_int[0], self.small.f_int_prev[0], 
+                                       self.small.u[0], self.small.u_prev[0], self.stability.lm_s_dts[-1], self.stability.lm_s_dts[-2])
+        dW_Gamma_dtS += dW
 
         # Stability Calculations over Large Time Step
         lm_L, lm_s, a_f = self.stability.LagrangeMultiplierEquiv(self.large.mass[-1], self.small.mass[0], 
@@ -144,6 +159,7 @@ class Proposed_MTS_stab:
                                        self.small.u[0], self.stability.u_s_prev_dtL)
         self.stability.calc_dW_Gamma_dtL("Large", self.large.mass[-1], a_f, self.stability.a_f[-2], self.large.f_int[-1], self.large.f_int_prev[-1],
                                        self.large.u[-1], self.large.u_prev[-1])
+        self.stability.dW_Gamma_S_dtS = np.append(self.stability.dW_Gamma_S_dtS, dW_Gamma_dtS)
         
         self.stability.f_int_s_prev_dtL = np.copy(self.small.f_int[0])
         self.stability.u_s_prev_dtL = np.copy(self.small.u[0])
@@ -155,9 +171,15 @@ def proposedCouplingStability(bar, vel_csv, stability_plots):
     accelBCs_L = abc(list(),list())
     accelBCs_s = abc(list(),list())
 
-    upd_largeDomain = SimpleIntegrator("total", bar.E_L, bar.rho_L, bar.length_L, 1, 
+    # Initialise with default material properties
+    young_L = np.full(bar.num_elem_L, bar.E_L)
+    density_L = np.full(bar.num_elem_L, bar.rho_L)
+    young_S = np.full(bar.num_elem_S, bar.E_S)
+    density_S = np.full(bar.num_elem_S, bar.rho_S)
+
+    upd_largeDomain = SimpleIntegrator("total", young_L, density_L, bar.length_L, 1, 
                                        bar.num_elem_L, propTime, vbc([0], [vel]), accelBCs_L, Co=bar.safety_Param)
-    upd_smallDomain = SimpleIntegrator("total", bar.E_S, bar.rho_S, bar.length_S, 1,
+    upd_smallDomain = SimpleIntegrator("total", young_S, density_S, bar.length_S, 1,
                                        bar.num_elem_S, propTime, None, accelBCs_s, Co=bar.safety_Param)
 
     energy_L = SubdomainEnergy()
@@ -174,10 +196,10 @@ def proposedCouplingStability(bar, vel_csv, stability_plots):
     pos_S = upd_fullDomain.small.position + upd_fullDomain.large.L
     
     # Solve Loop
-    while(upd_fullDomain.large.t <= 0.0016):
+    while(upd_fullDomain.large.t <= 0.0016): # 0.004315):
         upd_fullDomain.integrate()
         print("Time: ", upd_fullDomain.large.t)
-        if (upd_fullDomain.large.n % 10 == 0): # Adjust Number for output plots (Set High for Debugging)
+        if (upd_fullDomain.large.n % 80 == 0): # Adjust Number for output plots (Set High for Debugging)
             animate.save_single_plot(2, [upd_fullDomain.large.position, [position + upd_fullDomain.large.L for position in upd_fullDomain.small.position]],
                                      [upd_fullDomain.large.a, upd_fullDomain.small.a],
                                      "Acceleration", "Domain Position (m)", "Acceleration (m/s^2)",
@@ -222,6 +244,8 @@ def proposedCouplingStability(bar, vel_csv, stability_plots):
         stability.plot_dW_Gamma_dtL(show=True,csv=False)  
         stability.plot_dW_Link(show=True,csv=False)
         stability.plot_drift(show=True,csv=False)
+        stability.plot_eps(show=True,csv=False)
+        stability.plot_dW_Gamma_dtS(show=True,csv=False)
 
     steps = [upd_fullDomain.steps_L, upd_fullDomain.steps_S]
     domains = ['$\Omega_L^{Prop.}$', '$\Omega_S^{Prop.}$']

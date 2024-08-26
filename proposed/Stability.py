@@ -20,6 +20,7 @@ class Stability:
         # Coupling Energy
         self.dW_Gamma_L_dtL = np.array([0.0])
         self.dW_Gamma_S_dtL = np.array([0.0])
+        self.dW_Gamma_S_dtS = np.array([0.0]) 
         self.f_int_s_prev_dtL = 0.0
         self.u_s_prev_dtL = 0.0
 
@@ -37,6 +38,10 @@ class Stability:
         self.v_drift = np.array([0.0])
         self.t_sync = np.array([0.0])
         self.t_small = np.array([0.0])
+
+        # Check Acceleration Inconsistency
+        self.eps = np.array([0.0])
+        self.eps_diff = np.array([0.0])
 
     """
     Stability over a Large Time Step
@@ -93,7 +98,7 @@ class Stability:
     def calc_dW_Gamma_dtL(self, Domain, mass, a_Gamma, a_Gamma_prev, f_int, f_int_prev, u, u_prev):
         if (Domain == "Large"):
             dlm = self.lm_L[-1] + self.lm_L[-2]
-        else:
+        else: # Small
             dlm = self.lm_s[-1] + self.lm_s[-2]
 
         du = u - u_prev
@@ -101,8 +106,29 @@ class Stability:
 
         if (Domain == "Large"):
             self.dW_Gamma_L_dtL = np.append(self.dW_Gamma_L_dtL, dW_Gamma)
-        else:
+        else: # Small
             self.dW_Gamma_S_dtL = np.append(self.dW_Gamma_S_dtL, dW_Gamma)
+
+    def calc_dW_Gamma_dtS(self, Domain, mass, a_Gamma, a_Gamma_prev, f_int, f_int_prev, u, u_prev, lm, lm_prev):
+        if (Domain == "Small"):
+            dlm = lm + lm_prev
+        else: # Raise error
+            assert False, "Domain must be Small"
+
+        du = u - u_prev
+        dW_Gamma = 0.5 * du * (dlm + (mass * (a_Gamma + a_Gamma_prev)) + (f_int + f_int_prev))
+
+        return dW_Gamma
+
+    def plot_dW_Gamma_dtS(self, show, csv):
+        self.P.plot(2, [self.t_sync, self.t_sync], [self.dW_Gamma_L_dtL + self.dW_Gamma_S_dtL, self.dW_Gamma_L_dtL + self.dW_Gamma_S_dtS],
+                    "Fig 7 (L): Increment in Work Done across the Interface over a Large and Small Time Step",
+                    "Time (s)", "Interface Energy ($\delta \Gamma$J)",
+                    ["$\delta W_{\Gamma} \quad at \quad \Delta t_L$", "$\delta W_{\Gamma} \quad at \quad \Delta t_s$"], 
+                    [None, None], [None, None],
+                    show)
+        if (csv):
+            writeCSV("dW_Gamma_S.csv", self.t_sync, self.dW_Gamma_S_dtL, 't_L', 'dW_Gamma_s')
 
     def plot_dW_Gamma_dtL(self, show, csv):
         if (csv):
@@ -166,6 +192,24 @@ class Stability:
         if (csv):
             writeCSV("dW_Link_L.csv", self.t_sync, self.dW_Link_L, 't_L', 'dW_Link_L')
             writeCSV("dW_Link_s.csv", self.t_sync, self.dW_Link_s, 't_L', 'dW_Link_s')
+
+    def plot_eps(self, show, csv):
+        self.P.plot(1, [self.t_small], [self.eps],
+                    "Fig 8: Acceleration Inconsistency",
+                    "Time (s)", "Acceleration Inconsistency",
+                    ["$\epsilon$"], 
+                    [None, None], [None, None],
+                    show)
+        if (csv):
+            writeCSV("eps.csv", self.t_small, self.eps, 't_s', 'eps')
+        self.P.plot(1, [self.t_small], [self.eps_diff],
+                    "Fig 9: Acceleration Inconsistency Difference",
+                    "Time (s)", "Acceleration Inconsistency Difference",
+                    ["$\epsilon$ Difference"], 
+                    [None, None], [None, None],
+                    show)
+        if (csv):
+            writeCSV("eps_diff.csv", self.t_small, self.eps_diff, 't_s', 'eps_diff')
 
     """
     Checking of Drifting Conditions
