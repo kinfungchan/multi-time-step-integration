@@ -23,14 +23,15 @@ def main(bar):
     print("3. Cho Method")
     print("4. Dvorak Method")
     print("5. Run All Methods") 
+    print("6. Monolithic Method")
 
     while True:
-        choice = input("Enter the number of your choice (1-5): ")
-        if choice.isdigit() and 1 <= int(choice) <= 5:
+        choice = input("Enter the number of your choice (1-6): ")
+        if choice.isdigit() and 1 <= int(choice) <= 6:
             choice = int(choice)
             break
         else:
-            print("Invalid input. Please enter a number between 1 and 5.")
+            print("Invalid input. Please enter a number between 1 and 6.")
 
     method_name = {
         1: "Proposed Method",
@@ -56,12 +57,11 @@ def main(bar):
         prop = proposed.proposedCouplingStability(bar, False, True)
         cho = literature.ChoCoupling(bar)
         dvo = literature.DvorakCoupling(bar)
-    elif choice == 6:
-        proposed.monolithic()
-
         # Comparison of Methods Outputs
         paper = Paper(prop, cho, dvo)
         paper.all_plots()
+    elif choice == 6:
+        proposed.monolithic()       
 
     print(f"\nThe {method_name} has finished running.\n")
 
