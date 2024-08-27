@@ -200,7 +200,7 @@ class Stability:
                     [None, None], [None, None],
                     show)
         if (csv):
-            writeCSV("dW_Gamma_S.csv", self.t_sync, self.dW_Gamma_S_dtL, 't_L', 'dW_Gamma_s')
+            writeCSV("dW_Gamma_S.csv", self.t_sync, (self.dW_Gamma_L_dtL + self.dW_Gamma_S_dtS), 't_L', 'dW_Gamma_s')
 
     """
     Checking of Drifting Conditions

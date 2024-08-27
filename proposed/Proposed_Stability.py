@@ -97,6 +97,7 @@ class Proposed_MTS_stab:
                                                                             self.small.f_int[0], self.accelCoupling())
             # Check inconsistency in acceleration each small time step
             eps = np.abs((self.stability.lm_s[-1] / self.small.mass[0]) - (self.accelCoupling()) + (self.small.f_int[0] / self.small.mass[0]))
+            # eps = self.small.a_tilda[0] - self.accelCoupling() # Reviewer's do not account for lm
             # No difference over large time step
             # eps = np.abs((self.stability.lm_L[-1] / self.large.mass[-1]) + (self.accelCoupling()) + (self.large.f_int[-1] / self.large.mass[-1]))
             self.stability.eps = np.append(self.stability.eps, eps) 
@@ -198,10 +199,10 @@ def proposedCouplingStability(bar, vel_csv, stability_plots):
     pos_S = upd_fullDomain.small.position + upd_fullDomain.large.L
     
     # Solve Loop
-    while(upd_fullDomain.large.t <= 0.0016): # 0.004315):
+    while(upd_fullDomain.large.t <= 0.000671): # 0.0016):
         upd_fullDomain.integrate()
         print("Time: ", upd_fullDomain.large.t)
-        if (upd_fullDomain.large.n % 80 == 0): # Adjust Number for output plots (Set High for Debugging)
+        if (upd_fullDomain.large.n % 400 == 0): # Adjust Number for output plots (Set High for Debugging)
             animate.save_single_plot(2, [upd_fullDomain.large.position, [position + upd_fullDomain.large.L for position in upd_fullDomain.small.position]],
                                      [upd_fullDomain.large.a, upd_fullDomain.small.a],
                                      "Acceleration", "Domain Position (m)", "Acceleration (m/s^2)",
@@ -247,7 +248,7 @@ def proposedCouplingStability(bar, vel_csv, stability_plots):
         stability.plot_dW_Link(show=True,csv=False)
         stability.plot_drift(show=True,csv=False)
         stability.plot_eps(show=True,csv=False)
-        stability.plot_dW_Gamma_dtS(show=True,csv=False)
+        stability.plot_dW_Gamma_dtS(show=True,csv=True)
 
     steps = [upd_fullDomain.steps_L, upd_fullDomain.steps_S]
     domains = ['$\Omega_L^{Prop.}$', '$\Omega_S^{Prop.}$']
