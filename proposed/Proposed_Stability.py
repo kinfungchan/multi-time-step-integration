@@ -59,10 +59,19 @@ class Proposed_MTS_stab:
 
     def accelCoupling(self): 
         return -self.f_int_Gamma / self.mass_Gamma
+    
+    def accelCoupling_dt_S(self):
+        self.f_int_Gamma_dt_S = self.large.f_int[-1] + self.small.f_int[0]  
+        a_Gamma_dt_S = -self.f_int_Gamma_dt_S / self.mass_Gamma
+        self.stability.a_Gamma_dt_S = np.append(self.stability.a_Gamma_dt_S, a_Gamma_dt_S)
+        error = np.abs(a_Gamma_dt_S - self.accelCoupling())
+        self.stability.err = np.append(self.stability.err, error)
 
     def update_small_domain(self):
         self.small.a_bc.indexes.append(0)
         self.small.a_bc.accelerations.append(self.accelCoupling)
+        # Compare vs a_Gamma each small time step
+        self.accelCoupling_dt_S()
         self.small.single_tstep_integrate()
 
         self.steps_S = np.append(self.steps_S, self.small.dt)
@@ -199,7 +208,7 @@ def proposedCouplingStability(bar, vel_csv, stability_plots):
     pos_S = upd_fullDomain.small.position + upd_fullDomain.large.L
     
     # Solve Loop
-    while(upd_fullDomain.large.t <= 0.000671): # 0.0016):
+    while(upd_fullDomain.large.t <= 0.0016): 
         upd_fullDomain.integrate()
         print("Time: ", upd_fullDomain.large.t)
         if (upd_fullDomain.large.n % 400 == 0): # Adjust Number for output plots (Set High for Debugging)
@@ -248,6 +257,8 @@ def proposedCouplingStability(bar, vel_csv, stability_plots):
         stability.plot_dW_Link(show=True,csv=False)
         stability.plot_drift(show=True,csv=False)
         stability.plot_eps(show=True,csv=False)
+        stability.plot_err(show=True,csv=False)
+        stability.plot_a_Gamma_dtS_vs_dtL(show=True,csv=False)
         stability.plot_dW_Gamma_dtS(show=True,csv=True)
 
     steps = [upd_fullDomain.steps_L, upd_fullDomain.steps_S]

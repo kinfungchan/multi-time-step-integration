@@ -41,6 +41,8 @@ class Stability:
 
         # Check Acceleration Inconsistency
         self.eps = np.array([0.0])
+        self.err = np.array([0.0])
+        self.a_Gamma_dt_S = np.array([0.0]) 
 
     """
     Stability over a Large Time Step
@@ -180,6 +182,24 @@ class Stability:
                     show)
         if (csv):
             writeCSV("eps.csv", self.t_small, self.eps, 't_s', 'eps')
+
+    def plot_err(self, show, csv):
+        self.P.plot(1, [self.t_small], [self.err],
+                    "APPDX: Acceleration Error",
+                    "Time (s)", "Acceleration Error (m/s$^2$)",
+                    ["$\epsilon = abs(a_{\Gamma}^{\Delta t_s} - a_{\Gamma}^{\Delta t_L})$"], 
+                    [None, None], [None, None],
+                    show)
+        if (csv):
+            writeCSV("err.csv", self.t_small, self.err, 't_s', 'err')
+
+    def plot_a_Gamma_dtS_vs_dtL(self, show, csv):
+        self.P.plot(2, [self.t_small, self.t_sync], [self.a_Gamma_dt_S, self.a_Gamma],
+                    "APPDX: Interface Acceleration Solved on Large and Small Time Steps",
+                    "Time (s)", "Acceleration (m/s$^2$)",
+                    ["$a_{\Gamma}^{\Delta t_s}$", "$a_{\Gamma}^{\Delta t_L}$"], 
+                    [None, None], [None, None],
+                    show)
 
     def calc_dW_Gamma_dtS(self, Domain, mass, a_Gamma, a_Gamma_prev, f_int, f_int_prev, u, u_prev, lm, lm_prev):
         if (Domain == "Small"):
