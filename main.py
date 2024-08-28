@@ -70,8 +70,3 @@ if __name__ == "__main__":
     # bar = Bar_1D_HighHet()
     # bar = Bar_1D_HighHetUnstable()
     main(bar)
-
-    # proposed.monolithic()
-    # proposed.proposedCoupling(bar)
-    # cho = literature.ChoCoupling(bar)
-    # dvo = literature.DvorakCoupling(bar)
