@@ -124,7 +124,7 @@ class SimpleIntegrator:
             self.strain = (np.diff(self.u) / self.dx) 
             self.stress = self.strain * self.E
 
-            self.apply_bulk_viscosity(self.v, self.dx, min(self.rho), self.E, self.stress)
+            self.apply_bulk_viscosity(self.v, self.dx, self.rho, self.E, self.stress)
 
             self.f_int[1:-1] = -np.diff(self.stress)
             self.f_int[0] += -self.stress[0]
@@ -169,19 +169,22 @@ def monolithic():
     rho = 8000
     E_L = 0.02 * 10**9  # 0.02 GPa
     # E_s = 200.0 * 10**9  # 200.0 GPa
-    E_s = (np.pi/0.02)**2 * rho # Non Integer Time Step Ratio = pi
+    # E_s = (np.pi/0.02)**2 * rho # Non Integer Time Step Ratio = pi
+    E_s = 0.02 * 10**9  # 0.02 GPa
+    rho_s = 0.8
     L = 150 * 10**-3 # 100mm
     # Initialise with default material properties
-    young = np.full(n_elem, E_L)
-    density = np.full(n_elem, rho)
+    young = np.full(n_elem, E_L, dtype=np.float64)
+    density = np.full(n_elem, rho, dtype=np.float64)
     # Overwrite last 150 elements with E_s for High Heterogeneity
     young[-600:] = E_s
+    density[-600:] = rho_s
 
     propTime = 0.5 * L * np.sqrt(rho / E_L)
     def vel(t): return vbc.velbcSquare(t, 2 * (L / 3) , E_L, rho)
     velboundaryConditions = vbc(list([0]), list([vel]))
     tot_formulation = "total"
-    tot_bar = SimpleIntegrator(tot_formulation, young, density, L, 1, n_elem, propTime, velboundaryConditions, None, Co=0.9)
+    tot_bar = SimpleIntegrator(tot_formulation, young, density, L, 1, n_elem, propTime, velboundaryConditions, None, Co=0.5)
 
     # Intialise History
     hst = History(tot_bar.position, tot_bar.n_nodes, tot_bar.n_elem) 
@@ -190,17 +193,18 @@ def monolithic():
     plot = Plot()
     animate = Animation(plot)
 
-    while tot_bar.t <= 0.0016:
+    while tot_bar.t <= 0.0019:
         tot_bar.assemble_internal()
         tot_bar.single_tstep_integrate()
 
-        # History Data
-        hst.append_timestep(tot_bar.t, tot_bar.position,
-                            tot_bar.a, tot_bar.v, tot_bar.u, 
-                            tot_bar.stress, tot_bar.strain)
+        if (tot_bar.n % 50 == 0): # Determine frequency of Output Plots  
+            hst.append_timestep(tot_bar.t, tot_bar.position,
+                                    tot_bar.a, tot_bar.v, tot_bar.u, 
+                                    tot_bar.stress, tot_bar.strain)
+
         print("Time: ", tot_bar.t)
         # Plotting and Saving Figures
-        if (tot_bar.n % 200 == 0): # Determine frequency of Output Plots
+        if (tot_bar.n % 4000 == 0): # Determine frequency of Output Plots
             print("Time: ", tot_bar.t)
             animate.save_single_plot(1, [tot_bar.position],
                                      [tot_bar.a],
@@ -229,7 +233,7 @@ def monolithic():
     animate.save_MTS_gifs("Monolithic")
 
     # Write History to CSV
-    hst.write_to_csv("Mono_Conv900Elem_Co09")
+    hst.write_to_csv("Mono_HighHet_Density_wBV")
 
 
 
