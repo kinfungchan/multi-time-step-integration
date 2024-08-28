@@ -30,8 +30,8 @@ class Bar_1D_HighHet:
         self.area_L = 1 # 1m^2
         self.num_elem_L = 299
         # Small Domain
-        self.E_S = 200.0 * 10**9 # 200GPa High Heterogeneity
-        self.rho_S = self.rho_L
+        self.E_S = 0.02 * 10**9 # 0.02GPa
+        self.rho_S = 0.8
         self.length_S = (2 * 50 * 10**-3) + (50 * 10**-3) / 300
         self.area_S = self.area_L
         self.num_elem_S = 601
@@ -50,8 +50,8 @@ class Bar_1D_HighHetUnstable:
         self.area_L = 1 # 1m^2
         self.num_elem_L = 300
         # Small Domain
-        self.E_S = 200 * 10**9 # 200GPa High Heterogeneity
-        self.rho_S = self.rho_L
+        self.E_S = 0.02 * 10**9 # 0.02GPa
+        self.rho_S = 0.8
         self.length_S = 2 * 50 * 10**-3 
         self.area_S = self.area_L
         self.num_elem_S = 600

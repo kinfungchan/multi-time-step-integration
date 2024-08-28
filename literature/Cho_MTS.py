@@ -202,7 +202,7 @@ def ChoCoupling(bar):
     Domain_L.compute_stiffness_matrix()
 
     # Small Domain
-    Domain_S = Domain('Small', bar.E_S, bar.rho_L, bar.length_S, bar.area_L,
+    Domain_S = Domain('Small', bar.E_S, bar.rho_S, bar.length_S, bar.area_L,
                        bar.num_elem_S, bar.safety_Param, None)
     Domain_S.compute_mass_matrix()
     Domain_S.compute_stiffness_matrix()
@@ -225,7 +225,7 @@ def ChoCoupling(bar):
     pos_S = full_Domain.Small.position + full_Domain.Large.L
 
     # Integrate over time
-    while Domain_L.t <= 0.0019:
+    while Domain_L.t <= 0.0021:
         full_Domain.Cho_multistep()
 
         # History Data
@@ -280,8 +280,8 @@ def ChoCoupling(bar):
     print("Number of Integration Steps: ", full_Domain.el_steps)
 
     # Write History to CSV
-    hst_L.write_to_csv("Cho_Large_HighHet")
-    hst_S.write_to_csv("Cho_Small_HighHet")
+    hst_L.write_to_csv("Cho_Large_HighHet_Density")
+    hst_S.write_to_csv("Cho_Small_HighHet_Density")
 
     outputs = Outputs(domains, steps, sq_L, sq_S, pos_L, pos_S)
     return outputs
