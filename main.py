@@ -3,8 +3,7 @@ import os
 import literature
 import proposed
 from utils import Paper
-from bar import Bar_1D, Bar_1D_HighHet, Bar_1D_HighHetUnstable
-
+from bar import Bar_1D, Bar_1D_HighHet
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
 """
@@ -54,7 +53,7 @@ def main(bar):
         dvo = literature.DvorakCoupling(bar)
     elif choice == 5:  # Run all methods
         proposed.proposedCoupling(bar)
-        prop = proposed.proposedCouplingStability(bar, False, True)
+        prop = proposed.proposedCouplingStability(bar, False, False)
         cho = literature.ChoCoupling(bar)
         dvo = literature.DvorakCoupling(bar)
         # Comparison of Methods Outputs
@@ -68,5 +67,4 @@ def main(bar):
 if __name__ == "__main__":
     bar = Bar_1D()
     # bar = Bar_1D_HighHet()
-    # bar = Bar_1D_HighHetUnstable()
     main(bar)

@@ -211,7 +211,7 @@ def proposedCouplingStability(bar, vel_csv, stability_plots):
     while(upd_fullDomain.large.t <= 0.0016): 
         upd_fullDomain.integrate()
         print("Time: ", upd_fullDomain.large.t)
-        if (upd_fullDomain.large.n % 400 == 0): # Adjust Number for output plots (Set High for Debugging)
+        if (upd_fullDomain.large.n % 40 == 0): # Adjust Number for output plots (Set High for Debugging)
             animate.save_single_plot(2, [upd_fullDomain.large.position, [position + upd_fullDomain.large.L for position in upd_fullDomain.small.position]],
                                      [upd_fullDomain.large.a, upd_fullDomain.small.a],
                                      "Acceleration", "Domain Position (m)", "Acceleration (m/s^2)",

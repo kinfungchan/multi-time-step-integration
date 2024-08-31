@@ -225,7 +225,7 @@ def ChoCoupling(bar):
     pos_S = full_Domain.Small.position + full_Domain.Large.L
 
     # Integrate over time
-    while Domain_L.t <= 0.0021:
+    while Domain_L.t <= 0.0016:
         full_Domain.Cho_multistep()
 
         # History Data
@@ -233,7 +233,7 @@ def ChoCoupling(bar):
         hst_S.append_timestep(Domain_S.t, Domain_S.position, Domain_S.a, Domain_S.v, Domain_S.u, Domain_S.stress, Domain_S.strain)
 
         print("Time: ", Domain_L.t)
-        if Domain_L.n % 1000 == 0: 
+        if Domain_L.n % 40 == 0: 
             animate.save_single_plot(2, [full_Domain.Large.position, [position + full_Domain.Large.L for position in full_Domain.Small.position]],
                                      [full_Domain.Large.a, full_Domain.Small.a],
                                      "Acceleration", "Domain Position (m)", "Acceleration (m/s^2)",
@@ -278,10 +278,6 @@ def ChoCoupling(bar):
     print("Minimum Time Step for Whole Domain: ", full_Domain.min_dt)
     # Print Total Number of Integration Steps 
     print("Number of Integration Steps: ", full_Domain.el_steps)
-
-    # Write History to CSV
-    hst_L.write_to_csv("Cho_Large_HighHet_Density")
-    hst_S.write_to_csv("Cho_Small_HighHet_Density")
 
     outputs = Outputs(domains, steps, sq_L, sq_S, pos_L, pos_S)
     return outputs

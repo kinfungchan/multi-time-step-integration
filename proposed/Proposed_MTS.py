@@ -121,7 +121,7 @@ def proposedCoupling(bar):
     animate = Animation(plot)
 
     # Solve Loop
-    while(full_Domain.large.t <= 0.0019):
+    while(full_Domain.large.t <= 0.0016):
         full_Domain.integrate()
         
         # History Data
@@ -134,7 +134,7 @@ def proposedCoupling(bar):
 
         # Plotting and Saving Figures
         print("Time: ", full_Domain.large.t)
-        if (full_Domain.large.n % 40 == 0): # Determine frequency of Output Plots
+        if (full_Domain.large.n % 20 == 0): # Determine frequency of Output Plots
             animate.save_single_plot(2, [full_Domain.large.position, [position + full_Domain.large.L for position in full_Domain.small.position]],
                                      [full_Domain.large.a, full_Domain.small.a],
                                      "Acceleration", "Domain Position (m)", "Acceleration (m/s^2)",
@@ -160,11 +160,4 @@ def proposedCoupling(bar):
                                      animate.filenames_stress, full_Domain.large.n,
                                      ["Large", "Small"])
     animate.save_MTS_gifs("Proposed")
-
-    # Write History to CSV
-    # hst_L.write_to_csv("Proposed_Large_Co_L_Co_s_08")
-    # hst_S.write_to_csv("Proposed_Small_Co_L_Co_s_08")
-    hst_L.write_to_csv("Proposed_Large_HighHet_Density")
-    hst_S.write_to_csv("Proposed_Small_HighHet_Density")
-
     

@@ -106,7 +106,6 @@ class SimpleIntegrator:
             self.midposition = [self.position[n] + 0.5 * tempdx[n] for n in range(0, len(self.position)-1)]
             self.rho = self.elMass / tempdx
             # Check dt does not drop below 1% of initial value
-            # Avoid computing sqrt if min(self.rho)
             if ((self.Co * min(tempdx) * np.sqrt(min(self.rho) / self.E)) < self.dt_min_fac * self.dt_0):
                 self.dt = self.dt_min_fac * self.dt_0
             else:
@@ -193,7 +192,7 @@ def monolithic():
     plot = Plot()
     animate = Animation(plot)
 
-    while tot_bar.t <= 0.0019:
+    while tot_bar.t <= 0.0016:
         tot_bar.assemble_internal()
         tot_bar.single_tstep_integrate()
 
@@ -233,7 +232,7 @@ def monolithic():
     animate.save_MTS_gifs("Monolithic")
 
     # Write History to CSV
-    hst.write_to_csv("Mono_HighHet_Density_wBV")
+    # hst.write_to_csv("Mono_HighHet_Density_wBV")
 
 
 
