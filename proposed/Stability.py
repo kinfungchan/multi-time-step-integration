@@ -115,7 +115,7 @@ class Stability:
             writeCSV("dW_Gamma_L.csv", self.t_sync, self.dW_Gamma_L_dtL, 't_L', 'dW_Gamma_L')
             writeCSV("dW_Gamma_s.csv", self.t_sync, self.dW_Gamma_S_dtL, 't_L', 'dW_Gamma_s')
         self.P.plot(1, [self.t_sync], [self.dW_Gamma_L_dtL + self.dW_Gamma_S_dtL],
-                    "Fig 7 (L): Increment in Work Done across the Interface",
+                    "Fig 7 (R): Increment in Work Done across the Interface over $\Delta t_L$",
                     "Time (s)", "Interface Energy ($\delta \Gamma$J)",
                     ["$\delta W_{\Gamma L} + \delta W_{\Gamma s}$"], 
                     [None, None], [None, None],
@@ -164,7 +164,7 @@ class Stability:
 
     def plot_dW_Link(self, show, csv):
         self.P.plot(2, [self.t_sync, self.t_sync], [self.dW_Link_L, self.dW_Link_s],
-                    "Fig 7 (R): Increment in Work associated to coupling of subdomains recovered each $\Delta t_s$",
+                    "Fig 7 (L): Increment in Work associated to coupling of subdomains recovered each $\Delta t_s$",
                     "Time (s)", "Increments in Coupling Work (J)",
                     ["Large $\delta W_{Link, L}}$", "Small $\delta W_{Link, s}}$"], 
                     [None, None], [None, None],
@@ -172,34 +172,6 @@ class Stability:
         if (csv):
             writeCSV("dW_Link_L.csv", self.t_sync, self.dW_Link_L, 't_L', 'dW_Link_L')
             writeCSV("dW_Link_s.csv", self.t_sync, self.dW_Link_s, 't_L', 'dW_Link_s')
-
-    def plot_eps(self, show, csv):
-        self.P.plot(1, [self.t_small], [self.eps],
-                    "APPDX: Acceleration Inconsistency",
-                    "Time (s)", "Acceleration Inconsistency",
-                    ["$\epsilon$"], 
-                    [None, None], [None, None],
-                    show)
-        if (csv):
-            writeCSV("eps.csv", self.t_small, self.eps, 't_s', 'eps')
-
-    def plot_err(self, show, csv):
-        self.P.plot(1, [self.t_small], [self.err],
-                    "APPDX: Acceleration Error",
-                    "Time (s)", "Acceleration Error (m/s$^2$)",
-                    ["$\epsilon = abs(a_{\Gamma}^{\Delta t_s} - a_{\Gamma}^{\Delta t_L})$"], 
-                    [None, None], [None, None],
-                    show)
-        if (csv):
-            writeCSV("err.csv", self.t_small, self.err, 't_s', 'err')
-
-    def plot_a_Gamma_dtS_vs_dtL(self, show, csv):
-        self.P.plot(2, [self.t_small, self.t_sync], [self.a_Gamma_dt_S, self.a_Gamma],
-                    "APPDX: Interface Acceleration Solved on Large and Small Time Steps",
-                    "Time (s)", "Acceleration (m/s$^2$)",
-                    ["$a_{\Gamma}^{\Delta t_s}$", "$a_{\Gamma}^{\Delta t_L}$"], 
-                    [None, None], [None, None],
-                    show)
 
     def calc_dW_Gamma_dtS(self, Domain, mass, a_Gamma, a_Gamma_prev, f_int, f_int_prev, u, u_prev, lm, lm_prev):
         if (Domain == "Small"):
@@ -214,7 +186,7 @@ class Stability:
 
     def plot_dW_Gamma_dtS(self, show, csv):
         self.P.plot(2, [self.t_sync, self.t_sync], [self.dW_Gamma_L_dtL + self.dW_Gamma_S_dtL, self.dW_Gamma_L_dtL + self.dW_Gamma_S_dtS],
-                    "Fig APPDX (L): Increment in Work Done across the Interface over a Large and Small Time Step",
+                    "Fig 7 (R): Increment in Work Done across the Interface over $\Delta t_L$ and $\Delta t_s$",
                     "Time (s)", "Interface Energy ($\delta \Gamma$J)",
                     ["$\delta W_{\Gamma} \quad each \quad \Delta t_L$", "$\delta W_{\Gamma} \quad each \quad \Delta t_s$"], 
                     [None, None], [None, None],

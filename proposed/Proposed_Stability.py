@@ -252,14 +252,12 @@ def proposedCouplingStability(bar, vel_csv, stability_plots):
     
     if (stability_plots):
         ## Subdomain Stability
-        stability.plot_LMEquiv(csv=False)
-        stability.plot_dW_Gamma_dtL(show=True,csv=False)  
+        # stability.plot_LMEquiv(csv=False)
+        # stability.plot_dW_Gamma_dtL(show=True,csv=False)  
         stability.plot_dW_Link(show=True,csv=False)
-        stability.plot_drift(show=True,csv=False)
-        stability.plot_eps(show=True,csv=False)
-        stability.plot_err(show=True,csv=False)
-        stability.plot_a_Gamma_dtS_vs_dtL(show=True,csv=False)
         stability.plot_dW_Gamma_dtS(show=True,csv=True)
+        stability.plot_drift(show=True,csv=False)
+        
 
     steps = [upd_fullDomain.steps_L, upd_fullDomain.steps_S]
     domains = ['$\Omega_L^{Prop.}$', '$\Omega_S^{Prop.}$']
