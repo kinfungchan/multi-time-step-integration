@@ -8,7 +8,7 @@ from utils.Visualise import Plot, Animation
 """
 This module implements the subcycling algorithm with interface constant acceleration from:
 
-K.F. Chan, N. Bombace, D. Sap, D. Wason, and N. Petrinic (2024),
+K.F. Chan, N. Bombace, D. Sap, D. Wason, S. Falco and N. Petrinic (2024),
 A Multi-Time Stepping Algorithm for the Modelling of Heterogeneous Structures with Explicit Time Integration, 
 I.J. Num. Meth. in Eng., 2024;00:1–6.
 

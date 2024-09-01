@@ -10,7 +10,7 @@ import numpy as np
 """
 This module implements the subcycling algorithm with interface constant acceleration from:
 
-K.F. Chan, N. Bombace, D. Sap, D. Wason, and N. Petrinic (2024),
+K.F. Chan, N. Bombace, D. Sap, D. Wason, S. Falco and N. Petrinic (2024),
 A Multi-Time Stepping Algorithm for the Modelling of Heterogeneous Structures with Explicit Time Integration, 
 I.J. Num. Meth. in Eng., 2024;00:1–6.
 
@@ -64,8 +64,6 @@ class Proposed_MTS_stab:
         self.f_int_Gamma_dt_S = self.large.f_int[-1] + self.small.f_int[0]  
         a_Gamma_dt_S = -self.f_int_Gamma_dt_S / self.mass_Gamma
         self.stability.a_Gamma_dt_S = np.append(self.stability.a_Gamma_dt_S, a_Gamma_dt_S)
-        error = np.abs(a_Gamma_dt_S - self.accelCoupling())
-        self.stability.err = np.append(self.stability.err, error)
 
     def update_small_domain(self):
         self.small.a_bc.indexes.append(0)
@@ -104,12 +102,6 @@ class Proposed_MTS_stab:
             # Stability Calculations over Small Time Step
             lm_L_dts, lm_s_dts, f_int_L_dts = self.stability.f_int_L_equiv(self.large.mass[-1], self.small.mass[0],
                                                                             self.small.f_int[0], self.accelCoupling())
-            # Check inconsistency in acceleration each small time step
-            eps = np.abs((self.stability.lm_s[-1] / self.small.mass[0]) - (self.accelCoupling()) + (self.small.f_int[0] / self.small.mass[0]))
-            # eps = self.small.a_tilda[0] - self.accelCoupling() # Reviewer's do not account for lm
-            # No difference over large time step
-            # eps = np.abs((self.stability.lm_L[-1] / self.large.mass[-1]) + (self.accelCoupling()) + (self.large.f_int[-1] / self.large.mass[-1]))
-            self.stability.eps = np.append(self.stability.eps, eps) 
             
             # Link Work Calculation
             if (k < 3):                
@@ -252,8 +244,6 @@ def proposedCouplingStability(bar, vel_csv, stability_plots):
     
     if (stability_plots):
         ## Subdomain Stability
-        # stability.plot_LMEquiv(csv=False)
-        # stability.plot_dW_Gamma_dtL(show=True,csv=False)  
         stability.plot_dW_Link(show=True,csv=False)
         stability.plot_dW_Gamma_dtS(show=True,csv=True)
         stability.plot_drift(show=True,csv=False)
