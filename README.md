@@ -6,7 +6,7 @@ This repository allows you to solve for the wave propagation problems in 1D hete
 Two domains can be integrated with different time steps, that may be driven by material properties or discretisation size.
 
 Authors:
-Kin Fung Chan | Nicola Bombace | Duygu Sap | David Wason | Nik Petrinic
+Kin Fung Chan | Nicola Bombace | Duygu Sap | David Wason | Simone Falco | Nik Petrinic
 
 Address:
 Department of Engineering Science,
@@ -29,7 +29,7 @@ OX1 3PJ, UK
 ## Getting Started
 To Run:
 - Download Python onto your local machine
-- Install the following python libraries
+- Install the following python libraries (see requirements.txt)
 <pre>
 pip install numpy
 pip install matplotlib
