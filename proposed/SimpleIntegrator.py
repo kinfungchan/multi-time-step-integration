@@ -167,10 +167,10 @@ def monolithic():
     n_elem = 900
     rho = 8000
     E_L = 0.02 * 10**9  # 0.02 GPa
-    # E_s = 200.0 * 10**9  # 200.0 GPa
-    # E_s = (np.pi/0.02)**2 * rho # Non Integer Time Step Ratio = pi
-    E_s = 0.02 * 10**9  # 0.02 GPa
-    rho_s = 0.8
+    E_s = (np.pi/0.02)**2 * rho # Non Integer Time Step Ratio = pi
+    rho_s = rho
+    # E_s = 0.02 * 10**9  # 0.02 GPa for High Het Benchmark
+    # rho_s = 0.8 # for High Het Benchmark
     L = 150 * 10**-3 # 100mm
     # Initialise with default material properties
     young = np.full(n_elem, E_L, dtype=np.float64)
@@ -203,7 +203,7 @@ def monolithic():
 
         print("Time: ", tot_bar.t)
         # Plotting and Saving Figures
-        if (tot_bar.n % 4000 == 0): # Determine frequency of Output Plots
+        if (tot_bar.n % 40 == 0): # Determine frequency of Output Plots
             print("Time: ", tot_bar.t)
             animate.save_single_plot(1, [tot_bar.position],
                                      [tot_bar.a],
