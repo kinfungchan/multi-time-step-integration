@@ -1,6 +1,6 @@
 # multi-time-step-integration
 
-The manuscript "A Multi-Time Stepping Algorithm for the Explicit Finite Element Modelling of Dynamically Loaded Heterogeneous Structures" has been submitted and is under review for the publication in the International Journal for Numerical Methods in Engineering.
+The journal article "A Multi-Time Stepping Algorithm for the Explicit Finite Element Modelling of Dynamically Loaded Heterogeneous Structures" accompanies this code, as found in the International Journal for Numerical Methods in Engineering [here](http://doi.org/10.1002/nme.7638).
 
 This repository allows you to solve for the wave propagation problems in 1D heterogeneous media with multi time step integration. 
 Two domains can be integrated with different time steps, that may be driven by material properties or discretisation size.
